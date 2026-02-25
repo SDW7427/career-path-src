@@ -1,0 +1,207 @@
+@import "tailwindcss";
+
+/* React Flow base styles */
+@import "@xyflow/react/dist/style.css";
+
+/* ============================================================
+   Global wireframe styles
+   ============================================================ */
+
+:root {
+  /* Track accent colors */
+  --color-dev: #3b82f6;          /* blue-500 */
+  --color-dev-light: #dbeafe;    /* blue-100 */
+  --color-dev-ring: #2563eb;     /* blue-600 */
+
+  --color-infra: #06b6d4;        /* cyan-500 */
+  --color-infra-light: #cffafe;  /* cyan-100 */
+  --color-infra-ring: #0891b2;   /* cyan-600 */
+
+  --color-its: #8b5cf6;          /* violet-500 */
+  --color-its-light: #ede9fe;    /* violet-100 */
+  --color-its-ring: #7c3aed;     /* violet-600 */
+
+  /* Path type modifiers */
+  --color-specialist: #f0f9ff;   /* sky-50 */
+  --color-manager: #fefce8;      /* yellow-50 */
+  --color-common: #f9fafb;       /* gray-50 */
+}
+
+/* Ensure the page fills viewport */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ============================================================
+   React Flow customization
+   ============================================================ */
+
+/* Stage lane backgrounds (rendered as horizontal bands) */
+.react-flow__pane {
+  background-color: #fafbfc !important;
+}
+
+/* Hide default React Flow attribution for wireframe */
+.react-flow__attribution {
+  display: none !important;
+}
+
+/* Edge styles */
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.edge-normal .react-flow__edge-path {
+  stroke: #94a3b8;
+  stroke-width: 2;
+}
+
+.edge-optional .react-flow__edge-path {
+  stroke: #94a3b8;
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+
+.edge-cross-track .react-flow__edge-path {
+  stroke: #f59e0b;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+/* ============================================================
+   Custom node styles
+   ============================================================ */
+
+.career-node {
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+  padding: 10px 14px;
+  min-width: 140px;
+  max-width: 180px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 13px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.career-node:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+  transform: translateY(-1px);
+}
+
+/* Track-specific border colors */
+.career-node.track-development {
+  border-color: var(--color-dev);
+}
+.career-node.track-infrastructure {
+  border-color: var(--color-infra);
+}
+.career-node.track-it-support {
+  border-color: var(--color-its);
+}
+
+/* Path type fills */
+.career-node.path-specialist {
+  background: var(--color-specialist);
+}
+.career-node.path-manager {
+  background: var(--color-manager);
+  border-style: dashed;
+}
+.career-node.path-common {
+  background: var(--color-common);
+}
+
+/* Selected node */
+.career-node.selected {
+  box-shadow: 0 0 0 3px var(--color-dev-ring), 0 4px 12px rgba(0,0,0,0.12);
+}
+.career-node.selected.track-development {
+  box-shadow: 0 0 0 3px var(--color-dev-ring), 0 4px 12px rgba(0,0,0,0.12);
+}
+.career-node.selected.track-infrastructure {
+  box-shadow: 0 0 0 3px var(--color-infra-ring), 0 4px 12px rgba(0,0,0,0.12);
+}
+.career-node.selected.track-it-support {
+  box-shadow: 0 0 0 3px var(--color-its-ring), 0 4px 12px rgba(0,0,0,0.12);
+}
+
+/* Connected (highlighted) neighbor nodes */
+.career-node.connected {
+  box-shadow: 0 0 0 2px #fbbf24, 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Provisional / provisional style */
+.career-node.style-provisional {
+  border-style: dotted;
+  opacity: 0.85;
+}
+
+/* Stage badge */
+.career-node .stage-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.career-node.track-development .stage-badge {
+  background: var(--color-dev-light);
+  color: var(--color-dev-ring);
+}
+.career-node.track-infrastructure .stage-badge {
+  background: var(--color-infra-light);
+  color: var(--color-infra-ring);
+}
+.career-node.track-it-support .stage-badge {
+  background: var(--color-its-light);
+  color: var(--color-its-ring);
+}
+
+/* Path type badge */
+.career-node .path-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* ============================================================
+   Scrollbar styling (thin and subtle for wireframe)
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ============================================================
+   Stage lane overlay labels (positioned in the flow background)
+   ============================================================ */
+.stage-lane-label {
+  position: absolute;
+  left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  writing-mode: horizontal-tb;
+  pointer-events: none;
+  z-index: 0;
+}
