@@ -7,8 +7,6 @@ import type {
 } from '../types/career';
 import {
   getNodesByTrack,
-  getEdgesForNodes,
-  allNodes,
   allEdges,
   getNodeById,
 } from '../data/careerData';
