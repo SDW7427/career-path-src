@@ -8,11 +8,11 @@ import {
   PATH_TYPE_LABELS,
   type Stage,
 } from '../types/career';
-import { getNodeById } from '../data/careerData';
 
 interface DetailPanelProps {
   node: CareerNode | null;
   onNodeClick: (nodeId: string) => void;
+  getNodeById: (nodeId: string) => CareerNode | undefined;
 }
 
 /** Section wrapper for consistency */
@@ -53,7 +53,7 @@ const BulletList: React.FC<{ items: string[] }> = ({ items }) => {
  * Right-side detail panel showing full information for the selected career node.
  * Shows a placeholder when no node is selected.
  */
-const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick }) => {
+const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeById }) => {
   if (!node) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-center p-6">
