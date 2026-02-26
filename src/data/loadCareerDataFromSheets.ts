@@ -2,13 +2,36 @@ import type { CareerDataSet, CareerEdge, CareerNode, Stage } from '../types/care
 import { SHEET_SOURCES } from './sheetSources';
 import { csvToObjects } from '../utils/csv';
 
+/**
+ * Split a cell value into a string list.
+ *
+ * Supports both:
+ * - "a|b|c" (pipe)
+ * - multi-line values (Google Sheets cells with line breaks)
+ *
+ * Also removes common bullet prefixes (・, -, ●, etc.).
+ */
 function splitList(v: string): string[] {
-  const s = (v ?? '').trim();
+  const s = (v ?? '').replace(/\r\n/g, '\n').trim();
   if (!s) return [];
-  return s
-    .split('|')
-    .map((x) => x.trim())
-    .filter(Boolean);
+
+  const out: string[] = [];
+  const lines = s.split('\n');
+  for (const rawLine of lines) {
+    const line = (rawLine ?? '').trim();
+    if (!line) continue;
+
+    // Allow both "|" and newlines as separators.
+    const parts = line.split('|');
+    for (let part of parts) {
+      part = (part ?? '').trim();
+      if (!part) continue;
+      part = part.replace(/^[・\-\*\u2022●◯□■]+\s*/u, '');
+      if (!part) continue;
+      out.push(part);
+    }
+  }
+  return out;
 }
 
 function toNumber(v: string): number | undefined {
@@ -17,10 +40,34 @@ function toNumber(v: string): number | undefined {
 }
 
 function toStage(v: string): Stage {
-  const n = Number((v ?? '').trim());
-  if (n === 1 || n === 2 || n === 3 || n === 4 || n === 5 || n === 6) return n;
-  // 잘못 입력되면 일단 1로 fallback (원하면 여기서 throw로 바꿔도 됨)
+  const s = (v ?? '').trim();
+  // Accept values like "6", "G6", "段階6" etc.
+  const m = s.match(/[1-6]/);
+  if (m) return Number(m[0]) as Stage;
   return 1;
+}
+
+function normalizeTrack(v: string): CareerNode['track'] {
+  const s = (v ?? '').trim();
+  if (s === 'development' || s === 'infrastructure' || s === 'it-support') return s;
+  // Allow Japanese labels in sheets
+  if (s === '開発') return 'development';
+  if (s === 'インフラ') return 'infrastructure';
+  if (s === 'ITサポート') return 'it-support';
+  // Fallback
+  return 'development';
+}
+
+function normalizePathType(v: string): CareerNode['pathType'] {
+  const s = (v ?? '').trim().toLowerCase();
+  if (s === 'specialist' || s === 'manager' || s === 'common') return s as CareerNode['pathType'];
+  // Allow common variants
+  if (s === 'sp') return 'specialist';
+  if (s === 'mg') return 'manager';
+  if (s === '特化' || s === 'スペシャリスト') return 'specialist';
+  if (s === '管理' || s === 'マネージャー') return 'manager';
+  if (s === '共通') return 'common';
+  return 'common';
 }
 
 function withCacheBust(url: string): string {
@@ -45,10 +92,10 @@ export async function loadCareerDataFromSheets(): Promise<CareerDataSet> {
 
       return {
         id: r.id,
-        track: r.track as CareerNode['track'],
+        track: normalizeTrack(r.track),
         subtrack: r.subtrack || undefined,
         stage: toStage(r.stage),
-        pathType: r.pathType as CareerNode['pathType'],
+        pathType: normalizePathType(r.pathType),
         titleJa: r.titleJa || '',
         shortLabel: r.shortLabel || '',
         summary: r.summary || '',
