@@ -858,13 +858,13 @@ const developmentTemplateEdges: CareerEdge[] = [
   { source: 'dev-mg-3', target: 'dev-mg-4', type: 'normal' },
   { source: 'dev-mg-4', target: 'dev-mg-5', type: 'normal' },
   { source: 'dev-mg-5', target: 'dev-mg-6', type: 'normal' },
-  // Cross-over between specialist and manager (optional paths)
+  // Cross-over between specialist and manager (same stage only)
+  { source: 'dev-sp-1', target: 'dev-mg-1', type: 'optional', label: '兼任可' },
   { source: 'dev-sp-2', target: 'dev-mg-2', type: 'optional', label: '兼任可' },
   { source: 'dev-sp-3', target: 'dev-mg-3', type: 'optional', label: '兼任可' },
   { source: 'dev-sp-4', target: 'dev-mg-4', type: 'optional', label: '兼任可' },
   { source: 'dev-sp-5', target: 'dev-mg-5', type: 'optional', label: '兼任可' },
-  // Entry from specialist to manager track
-  { source: 'dev-sp-1', target: 'dev-mg-2', type: 'optional', label: 'マネジメントへ' },
+  { source: 'dev-sp-6', target: 'dev-mg-6', type: 'optional', label: '兼任可' },
 ];
 
 const infrastructureTemplateEdges: CareerEdge[] = [
@@ -879,11 +879,27 @@ const infrastructureTemplateEdges: CareerEdge[] = [
   { source: 'infra-mg-3', target: 'infra-mg-4', type: 'normal' },
   { source: 'infra-mg-4', target: 'infra-mg-5', type: 'normal' },
   { source: 'infra-mg-5', target: 'infra-mg-6', type: 'normal' },
-  // Entry to manager from specialist
-  { source: 'infra-sp-2', target: 'infra-mg-2', type: 'optional', label: 'マネジメントへ' },
+  // Cross-over between specialist and manager (same stage only)
+  { source: 'infra-sp-2', target: 'infra-mg-2', type: 'optional', label: '兼任可' },
   { source: 'infra-sp-3', target: 'infra-mg-3', type: 'optional', label: '兼任可' },
   { source: 'infra-sp-4', target: 'infra-mg-4', type: 'optional', label: '兼任可' },
   { source: 'infra-sp-5', target: 'infra-mg-5', type: 'optional', label: '兼任可' },
+  { source: 'infra-sp-6', target: 'infra-mg-6', type: 'optional', label: '兼任可' },
+];
+
+const developmentEdges: CareerEdge[] = [
+  ...cloneEdgesForVariant(developmentTemplateEdges, 'dev', 'dev-web'),
+  ...cloneEdgesForVariant(developmentTemplateEdges, 'dev', 'dev-mobile'),
+  // 段階1は Web/モバイル共通
+  { source: 'dev-web-sp-1', target: 'dev-mobile-sp-1', type: 'optional', label: '共通' },
+  { source: 'dev-web-mg-1', target: 'dev-mobile-mg-1', type: 'optional', label: '共通' },
+];
+
+const infrastructureEdges: CareerEdge[] = [
+  ...cloneEdgesForVariant(infrastructureTemplateEdges, 'infra', 'infra-server'),
+  ...cloneEdgesForVariant(infrastructureTemplateEdges, 'infra', 'infra-network'),
+  // 段階1は サーバー/ネットワーク共通
+  { source: 'infra-server-sp-1', target: 'infra-network-sp-1', type: 'optional', label: '共通' },
 ];
 
 const developmentEdges: CareerEdge[] = [

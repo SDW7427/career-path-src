@@ -1,6 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { CareerEdge, CareerNode, PathType, Track } from '../types/career';
 
+const DEFAULT_SUBTRACKS: Record<Track, string[]> = {
+  development: ['Webアプリケーション', 'モバイルアプリ'],
+  infrastructure: ['サーバー', 'ネットワーク'],
+  'it-support': ['ITサポート', '情シス支援', 'PMO支援'],
+};
+
 export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[]) {
   const [activeTrack, setActiveTrack] = useState<Track>('development');
   const [activeSubtrack, setActiveSubtrack] = useState<string>('all');
@@ -24,8 +30,14 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
       labels.add(node.subtrack);
     });
 
-    return Array.from(labels).sort((a, b) => a.localeCompare(b, 'ja'));
+    const fromData = Array.from(labels).sort((a, b) => a.localeCompare(b, 'ja'));
+    return fromData.length > 0 ? fromData : DEFAULT_SUBTRACKS[activeTrack];
   }, [activeTrack, allNodes]);
+
+  const hasTrackSubtrackData = useMemo(
+    () => allNodes.some((node) => node.track === activeTrack && Boolean(node.subtrack)),
+    [activeTrack, allNodes]
+  );
 
   const handleTrackChange = useCallback((track: Track) => {
     setActiveTrack(track);
@@ -56,7 +68,7 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
   const filteredNodes: CareerNode[] = useMemo(() => {
     let nodes = allNodes.filter((n) => n.track === activeTrack);
 
-    if (activeSubtrack !== 'all') {
+    if (activeSubtrack !== 'all' && hasTrackSubtrackData) {
       nodes = nodes.filter((n) => n.subtrack === activeSubtrack);
     }
 
@@ -81,7 +93,7 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
     }
 
     return nodes;
-  }, [allNodes, activeTrack, activeSubtrack, activeFilters, searchQuery]);
+  }, [allNodes, activeTrack, activeSubtrack, activeFilters, hasTrackSubtrackData, searchQuery]);
 
   const filteredEdges: CareerEdge[] = useMemo(() => {
     const nodeIds = new Set(filteredNodes.map((n) => n.id));

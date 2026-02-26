@@ -5,6 +5,99 @@ import type { Track } from '../types/career';
 const STAGE_Y_BASE = 50;
 const STAGE_Y_GAP = 150;
 const STAGES = [1, 2, 3, 4, 5, 6];
+const GROUP_TITLE_HALF_WIDTH = 72;
+
+interface StageLaneOverlayProps {
+  track: Track;
+}
+
+interface LaneHeader {
+  label: string;
+  x: number;
+}
+
+interface GroupHeader {
+  label: string;
+  centerX: number;
+  startX: number;
+  endX: number;
+  lanes: LaneHeader[];
+}
+
+function getGroupHeaders(track: Track): GroupHeader[] {
+  switch (track) {
+    case 'development':
+      return [
+        {
+          label: 'Webアプリケーション',
+          centerX: 170,
+          startX: 10,
+          endX: 330,
+          lanes: [
+            { label: 'Specialist', x: 80 },
+            { label: 'Manager', x: 260 },
+          ],
+        },
+        {
+          label: 'モバイルアプリ',
+          centerX: 590,
+          startX: 430,
+          endX: 750,
+          lanes: [
+            { label: 'Specialist', x: 500 },
+            { label: 'Manager', x: 680 },
+          ],
+        },
+      ];
+    case 'infrastructure':
+      return [
+        {
+          label: 'サーバー',
+          centerX: 170,
+          startX: 10,
+          endX: 330,
+          lanes: [
+            { label: 'Specialist', x: 80 },
+            { label: 'Manager', x: 260 },
+          ],
+        },
+        {
+          label: 'ネットワーク',
+          centerX: 590,
+          startX: 430,
+          endX: 750,
+          lanes: [
+            { label: 'Specialist', x: 500 },
+            { label: 'Manager', x: 680 },
+          ],
+        },
+      ];
+    case 'it-support':
+      return [
+        {
+          label: 'ITサポート',
+          centerX: 100,
+          startX: 20,
+          endX: 180,
+          lanes: [{ label: 'Manager', x: 100 }],
+        },
+        {
+          label: '情シス支援',
+          centerX: 350,
+          startX: 270,
+          endX: 430,
+          lanes: [{ label: 'Manager', x: 350 }],
+        },
+        {
+          label: 'PMO支援',
+          centerX: 600,
+          startX: 520,
+          endX: 680,
+          lanes: [{ label: 'Manager', x: 600 }],
+        },
+      ];
+  }
+}
 
 interface StageLaneOverlayProps {
   track: Track;
@@ -169,7 +262,7 @@ const StageLaneOverlay: React.FC<StageLaneOverlayProps> = ({ track }) => {
             className="absolute px-3 py-1 rounded-full border border-blue-300 bg-white/95 text-[13px] font-bold text-blue-800 shadow-sm"
             style={{
               top: titleTop,
-              left: group.centerX * zoom + x - 72,
+              left: group.centerX * zoom + x - GROUP_TITLE_HALF_WIDTH,
             }}
           >
             {group.label}

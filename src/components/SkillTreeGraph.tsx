@@ -84,7 +84,7 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
       animated: ce.type === 'cross-track',
       style: ce.type === 'cross-track' ? { stroke: '#f59e0b' } : ce.type === 'optional' ? { stroke: '#94a3b8', strokeDasharray: '6 4' } : { stroke: '#94a3b8' },
       labelStyle: { fontSize: 10, fill: '#64748b' },
-      type: 'smoothstep',
+      type: ce.type === 'optional' ? 'straight' : 'smoothstep',
     }));
   }, [careerEdges]);
 
