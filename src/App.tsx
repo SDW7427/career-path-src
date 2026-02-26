@@ -42,7 +42,9 @@ const App: React.FC = () => {
         }
       } catch (e) {
         if (!cancelled) {
-          setLoadError(e instanceof Error ? e.message : 'Failed to load data from Google Sheets.');
+          setLoadError(
+            e instanceof Error ? e.message : 'Failed to load data from Google Sheets.'
+          );
           // fallback data stays
         }
       }
@@ -70,46 +72,68 @@ const App: React.FC = () => {
   } = useCareerPathState(data.nodes, data.edges);
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      {/* Header */}
-      <header className="border-b bg-white">
-        <div className="max-w-[1400px] mx-auto px-5 py-4 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold leading-tight">Career Path</h1>
-            <p className="text-xs text-gray-500">キャリアパスモデル（育成面談用）</p>
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+      {/* ============================================================
+          A. HEADER
+          ============================================================ */}
+      <header className="flex-shrink-0 bg-white border-b border-gray-200 px-5 py-3">
+        <div className="flex items-center justify-between">
+          {/* Title block */}
+          <div className="flex items-center gap-6">
+            <div>
+              <h1 className="text-xl font-bold text-gray-800 tracking-tight">
+                Career Path
+              </h1>
+              <p className="text-[11px] text-gray-400 -mt-0.5">
+                キャリアパスモデル（育成面談用）
+              </p>
+            </div>
+
+            {/* Track Tabs */}
+            <TrackTabs
+              activeTrack={activeTrack}
+              onTrackChange={handleTrackChange}
+            />
           </div>
 
-          <div className="flex items-center gap-3">
-            <TrackTabs activeTrack={activeTrack} onTrackChange={handleTrackChange} />
-            <div className="text-xs text-gray-500">
-              現在の表示: <span className="font-semibold">{TRACK_LABELS[activeTrack]}</span>
-              {filteredNodes.length > 0 && <>（{filteredNodes.length} ノード）</>}
-            </div>
+          {/* Right side: active track indicator */}
+          <div className="text-xs text-gray-400">
+            現在の表示:{' '}
+            <span className="font-semibold text-gray-600">
+              {TRACK_LABELS[activeTrack]}
+            </span>
+            {filteredNodes.length > 0 && (
+              <span className="ml-2 text-gray-300">
+                ({filteredNodes.length} ノード)
+              </span>
+            )}
           </div>
         </div>
 
+        {/* Load error banner (optional) */}
         {loadError && (
-          <div className="max-w-[1400px] mx-auto px-5 pb-3">
-            <div className="text-xs bg-amber-50 text-amber-800 border border-amber-200 rounded px-3 py-2">
-              Sheetsからの読み込みに失敗したため、ローカルデータを表示中：{loadError}
-            </div>
+          <div className="mt-2 text-[11px] bg-amber-50 text-amber-800 border border-amber-200 rounded px-3 py-2">
+            Sheetsからの読み込みに失敗したため、ローカルデータを表示中：{loadError}
           </div>
         )}
       </header>
 
-      {/* Control Bar */}
-      <div className="max-w-[1400px] mx-auto px-5 py-3">
-        <ControlBar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          activeFilters={activeFilters}
-          onFilterToggle={handleFilterToggle}
-        />
-      </div>
+      {/* ============================================================
+          CONTROL BAR
+          ============================================================ */}
+      <ControlBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        activeFilters={activeFilters}
+        onFilterToggle={handleFilterToggle}
+      />
 
-      {/* Main */}
-      <main className="max-w-[1400px] mx-auto px-5 pb-6 flex gap-4">
-        <section className="flex-[2] bg-white rounded-lg border overflow-hidden">
+      {/* ============================================================
+          B + C. MAIN CONTENT AREA
+          ============================================================ */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* B. LEFT PANE — Skill Tree Graph (2/3 width) */}
+        <div className="flex-[2] min-w-0 border-r border-gray-200 bg-white">
           <SkillTreeGraph
             careerNodes={filteredNodes}
             careerEdges={filteredEdges}
@@ -118,12 +142,17 @@ const App: React.FC = () => {
             track={activeTrack}
             onNodeClick={handleNodeClick}
           />
-        </section>
+        </div>
 
-        <aside className="flex-[1] bg-white rounded-lg border overflow-hidden">
-          <DetailPanel node={selectedNode} onNodeClick={handleNodeClick} getNodeById={getNodeById} />
-        </aside>
-      </main>
+        {/* C. RIGHT PANE — Detail Panel (1/3 width) */}
+        <div className="flex-[1] min-w-[320px] max-w-[420px] bg-white border-l border-gray-100">
+          <DetailPanel
+            node={selectedNode}
+            onNodeClick={handleNodeClick}
+            getNodeById={getNodeById}
+          />
+        </div>
+      </div>
     </div>
   );
 };
