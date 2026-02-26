@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import TrackTabs from './components/TrackTabs';
 import ControlBar from './components/ControlBar';
+import SubtrackTabs from './components/SubtrackTabs';
 import SkillTreeGraph from './components/SkillTreeGraph';
 import DetailPanel from './components/DetailPanel';
 import { useCareerPathState } from './hooks/useCareerPathState';
@@ -57,6 +58,8 @@ const App: React.FC = () => {
 
   const {
     activeTrack,
+    activeSubtrack,
+    availableSubtracks,
     selectedNodeId,
     selectedNode,
     searchQuery,
@@ -65,6 +68,7 @@ const App: React.FC = () => {
     filteredEdges,
     connectedNodeIds,
     handleTrackChange,
+    handleSubtrackChange,
     handleNodeClick,
     setSearchQuery,
     handleFilterToggle,
@@ -89,11 +93,24 @@ const App: React.FC = () => {
               </p>
             </div>
 
-            {/* Track Tabs */}
-            <TrackTabs
-              activeTrack={activeTrack}
-              onTrackChange={handleTrackChange}
-            />
+            {/* Track + Subtrack selectors */}
+            <div className="flex items-center gap-5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-500">区分</span>
+                <TrackTabs
+                  activeTrack={activeTrack}
+                  onTrackChange={handleTrackChange}
+                />
+              </div>
+
+              <SubtrackTabs
+                track={activeTrack}
+                subtracks={availableSubtracks}
+                activeSubtrack={activeSubtrack}
+                onSubtrackChange={handleSubtrackChange}
+                showLabel
+              />
+            </div>
           </div>
 
           {/* Right side: active track indicator */}
@@ -101,6 +118,9 @@ const App: React.FC = () => {
             現在の表示:{' '}
             <span className="font-semibold text-gray-600">
               {TRACK_LABELS[activeTrack]}
+            </span>
+            <span className="ml-1 text-gray-500">
+              / {activeSubtrack === 'all' ? '全分類' : activeSubtrack}
             </span>
             {filteredNodes.length > 0 && (
               <span className="ml-2 text-gray-300">
