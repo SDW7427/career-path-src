@@ -116,7 +116,11 @@ const App: React.FC = () => {
         </section>
 
         <aside className="flex-[1] bg-white rounded-lg border overflow-hidden">
-          <DetailPanel node={selectedNode} onNodeClick={handleNodeClick} getNodeById={getNodeById} />
+           <DetailPanel
+            node={selectedNode}
+            onNodeClick={handleNodeClick}
+            getNodeById={getNodeById}
+           />
         </aside>
       </main>
     </div>
