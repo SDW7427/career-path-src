@@ -27,14 +27,14 @@ const STAGE_Y_GAP = 150;
 /** Base Y offset from top */
 const BASE_Y = 50;
 /** Y position for a given stage */
-const stageY = (stage: number) => BASE_Y + (stage - 1) * STAGE_Y_GAP;
+const stageY = (stage: number) => BASE_Y + (6 - stage) * STAGE_Y_GAP;
 
 // === DEVELOPMENT TRACK (開発) =============================================
 
 const DEV_SP_X = 180;  // Specialist column
 const DEV_MG_X = 480;  // Manager column
 
-const developmentNodes: CareerNode[] = [
+const developmentTemplateNodes: CareerNode[] = [
   // --- Specialist ---
   {
     id: 'dev-sp-1',
@@ -247,7 +247,7 @@ const developmentNodes: CareerNode[] = [
 const INFRA_SP_X = 180;
 const INFRA_MG_X = 480;
 
-const infrastructureNodes: CareerNode[] = [
+const infrastructureTemplateNodes: CareerNode[] = [
   // --- Specialist ---
   {
     id: 'infra-sp-1',
@@ -440,6 +440,101 @@ const infrastructureNodes: CareerNode[] = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Generated subtrack variants (開発/インフラを複数分類で表示)
+// ---------------------------------------------------------------------------
+
+const DEV_WEB_SP_X = 80;
+const DEV_WEB_MG_X = 260;
+const DEV_MOBILE_SP_X = 500;
+const DEV_MOBILE_MG_X = 680;
+
+const INFRA_SERVER_SP_X = 80;
+const INFRA_SERVER_MG_X = 260;
+const INFRA_NETWORK_SP_X = 500;
+const INFRA_NETWORK_MG_X = 680;
+
+interface SubtrackVariant {
+  idPrefix: string;
+  subtrack: string;
+  specialistX: number;
+  managerX: number;
+}
+
+function toVariantId(id: string, originalPrefix: string, variantPrefix: string): string {
+  return id.replace(new RegExp(`^${originalPrefix}-`), `${variantPrefix}-`);
+}
+
+function cloneNodesForVariant(
+  nodes: CareerNode[],
+  originalPrefix: string,
+  variant: SubtrackVariant
+): CareerNode[] {
+  return nodes.map((node) => ({
+    ...node,
+    id: toVariantId(node.id, originalPrefix, variant.idPrefix),
+    subtrack: variant.subtrack,
+    canCoexistWith: node.canCoexistWith?.map((id) => toVariantId(id, originalPrefix, variant.idPrefix)),
+    relatedNodeIds: node.relatedNodeIds?.map((id) =>
+      id.startsWith(`${originalPrefix}-`) ? toVariantId(id, originalPrefix, variant.idPrefix) : id
+    ),
+    position: {
+      x: node.pathType === 'specialist' ? variant.specialistX : variant.managerX,
+      y: stageY(node.stage),
+    },
+  }));
+}
+
+function cloneEdgesForVariant(
+  edges: CareerEdge[],
+  originalPrefix: string,
+  variantPrefix: string
+): CareerEdge[] {
+  return edges.map((edge) => ({
+    ...edge,
+    source: toVariantId(edge.source, originalPrefix, variantPrefix),
+    target: toVariantId(edge.target, originalPrefix, variantPrefix),
+  }));
+}
+
+const developmentVariants: SubtrackVariant[] = [
+  {
+    idPrefix: 'dev-web',
+    subtrack: 'Webアプリケーション',
+    specialistX: DEV_WEB_SP_X,
+    managerX: DEV_WEB_MG_X,
+  },
+  {
+    idPrefix: 'dev-mobile',
+    subtrack: 'モバイルアプリ',
+    specialistX: DEV_MOBILE_SP_X,
+    managerX: DEV_MOBILE_MG_X,
+  },
+];
+
+const infrastructureVariants: SubtrackVariant[] = [
+  {
+    idPrefix: 'infra-server',
+    subtrack: 'サーバー',
+    specialistX: INFRA_SERVER_SP_X,
+    managerX: INFRA_SERVER_MG_X,
+  },
+  {
+    idPrefix: 'infra-network',
+    subtrack: 'ネットワーク',
+    specialistX: INFRA_NETWORK_SP_X,
+    managerX: INFRA_NETWORK_MG_X,
+  },
+];
+
+const developmentNodes: CareerNode[] = developmentVariants.flatMap((variant) =>
+  cloneNodesForVariant(developmentTemplateNodes, 'dev', variant)
+);
+
+const infrastructureNodes: CareerNode[] = infrastructureVariants.flatMap((variant) =>
+  cloneNodesForVariant(infrastructureTemplateNodes, 'infra', variant)
+);
+
 // === IT SUPPORT TRACK (ITサポート) =========================================
 
 const ITS_HD_X = 100;   // ヘルプデスク column
@@ -451,9 +546,9 @@ const itSupportNodes: CareerNode[] = [
   {
     id: 'its-hd-1',
     track: 'it-support',
-    subtrack: 'ヘルプデスク',
+    subtrack: 'ITサポート',
     stage: 1,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: 'キッティング・ヘルプデスク（オペレーター）',
     shortLabel: 'キッティング/HD',
     summary: 'PC設定・ヘルプデスク一次対応。IT基礎スキルの習得段階。',
@@ -463,15 +558,15 @@ const itSupportNodes: CareerNode[] = [
     toolsEnvironmentsLanguages: ['Windows', 'ServiceNow', 'Teams'],
     nextStepConditions: ['オペレーター実務6ヶ月以上'],
     tags: ['ヘルプデスク'],
-    relatedNodeIds: ['infra-sp-1'],
+    relatedNodeIds: ['infra-server-sp-1', 'infra-network-sp-1'],
     position: { x: ITS_HD_X, y: stageY(1) },
   },
   {
     id: 'its-hd-2',
     track: 'it-support',
-    subtrack: 'ヘルプデスク',
+    subtrack: 'ITサポート',
     stage: 2,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: 'ジュニアオペレーター',
     shortLabel: 'Jr.オペレーター',
     summary: 'ヘルプデスク二次対応、ナレッジ蓄積、新人OJTを担当。',
@@ -486,9 +581,9 @@ const itSupportNodes: CareerNode[] = [
   {
     id: 'its-hd-3',
     track: 'it-support',
-    subtrack: 'ヘルプデスク',
+    subtrack: 'ITサポート',
     stage: 3,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: 'サブリーダー',
     shortLabel: 'サブリーダー',
     summary: 'ヘルプデスクチームのサブリーダー。シフト管理、エスカレーション対応。',
@@ -503,9 +598,9 @@ const itSupportNodes: CareerNode[] = [
   {
     id: 'its-hd-4',
     track: 'it-support',
-    subtrack: 'ヘルプデスク',
+    subtrack: 'ITサポート',
     stage: 4,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: 'リーダー',
     shortLabel: 'リーダー',
     summary: 'ヘルプデスクチームリーダー。品質管理、SLA管理、顧客報告を担当。',
@@ -520,9 +615,9 @@ const itSupportNodes: CareerNode[] = [
   {
     id: 'its-hd-5',
     track: 'it-support',
-    subtrack: 'ヘルプデスク',
+    subtrack: 'ITサポート',
     stage: 5,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: 'SV（スーパーバイザー）',
     shortLabel: 'SV',
     summary: 'ヘルプデスクスーパーバイザー。複数チーム管理、業務改善を推進。',
@@ -537,9 +632,9 @@ const itSupportNodes: CareerNode[] = [
   {
     id: 'its-hd-6',
     track: 'it-support',
-    subtrack: 'ヘルプデスク',
+    subtrack: 'ITサポート',
     stage: 6,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: 'センター長／マネージャー',
     shortLabel: 'センター長',
     summary: 'ヘルプデスクセンター全体の統括。事業計画、P&L管理を担当。',
@@ -558,7 +653,7 @@ const itSupportNodes: CareerNode[] = [
     track: 'it-support',
     subtrack: '情シス支援',
     stage: 2,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: '社内SE／情シスサポート',
     shortLabel: '情シスサポート',
     summary: '社内IT環境のサポート。アカウント管理、ソフト導入支援を担当。',
@@ -576,7 +671,7 @@ const itSupportNodes: CareerNode[] = [
     track: 'it-support',
     subtrack: '情シス支援',
     stage: 3,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: '社内SE／情シス要員',
     shortLabel: '情シス要員',
     summary: '情報システム部門の一員として、社内システムの運用・改善を担当。',
@@ -593,7 +688,7 @@ const itSupportNodes: CareerNode[] = [
     track: 'it-support',
     subtrack: '情シス支援',
     stage: 4,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: '情シス担当／IT担当',
     shortLabel: '情シス担当',
     summary: '情報システムの企画・導入・運用を担当。IT戦略の実行部隊。',
@@ -610,7 +705,7 @@ const itSupportNodes: CareerNode[] = [
     track: 'it-support',
     subtrack: '情シス支援',
     stage: 5,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: '情シスリーダー',
     shortLabel: '情シスリーダー',
     summary: '情報システム部門のリーダー。IT戦略策定、チーム管理を担当。',
@@ -627,7 +722,7 @@ const itSupportNodes: CareerNode[] = [
     track: 'it-support',
     subtrack: '情シス支援',
     stage: 6,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: '情シスマネージャ',
     shortLabel: '情シスMgr',
     summary: '情報システム部門のマネージャ。IT統括、経営参画を担当。',
@@ -646,7 +741,7 @@ const itSupportNodes: CareerNode[] = [
     track: 'it-support',
     subtrack: 'PMO支援',
     stage: 1,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: 'PMO事務',
     shortLabel: 'PMO事務',
     summary: 'PMO事務作業。会議調整、資料作成、データ入力を担当。',
@@ -663,7 +758,7 @@ const itSupportNodes: CareerNode[] = [
     track: 'it-support',
     subtrack: 'PMO支援',
     stage: 2,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: 'PMO補佐',
     shortLabel: 'PMO補佐',
     summary: 'PMO業務の補佐。進捗集約、課題管理、報告書作成を担当。',
@@ -681,7 +776,7 @@ const itSupportNodes: CareerNode[] = [
     track: 'it-support',
     subtrack: 'PMO支援',
     stage: 3,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: 'PMOアシスタント',
     shortLabel: 'PMOアシスタント',
     summary: 'PMOアシスタントとして、プロジェクト管理プロセスの運用を担当。',
@@ -698,7 +793,7 @@ const itSupportNodes: CareerNode[] = [
     track: 'it-support',
     subtrack: 'PMO支援',
     stage: 4,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: 'PMO担当',
     shortLabel: 'PMO担当',
     summary: 'PMO担当としてプロジェクト管理の標準化・推進を担当。',
@@ -715,7 +810,7 @@ const itSupportNodes: CareerNode[] = [
     track: 'it-support',
     subtrack: 'PMO支援',
     stage: 5,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: 'PMOリーダー',
     shortLabel: 'PMOリーダー',
     summary: 'PMOチームのリーダー。PMO組織運営、全社PM力向上を推進。',
@@ -732,7 +827,7 @@ const itSupportNodes: CareerNode[] = [
     track: 'it-support',
     subtrack: 'PMO支援',
     stage: 6,
-    pathType: 'common',
+    pathType: 'manager',
     titleJa: 'PMOマネージャ',
     shortLabel: 'PMO Mgr',
     summary: 'PMO部門マネージャ。全社プロジェクトガバナンス、PMO戦略を統括。',
@@ -750,7 +845,7 @@ const itSupportNodes: CareerNode[] = [
 // Edges
 // ---------------------------------------------------------------------------
 
-const developmentEdges: CareerEdge[] = [
+const developmentTemplateEdges: CareerEdge[] = [
   // Specialist chain
   { source: 'dev-sp-1', target: 'dev-sp-2', type: 'normal' },
   { source: 'dev-sp-2', target: 'dev-sp-3', type: 'normal' },
@@ -763,16 +858,16 @@ const developmentEdges: CareerEdge[] = [
   { source: 'dev-mg-3', target: 'dev-mg-4', type: 'normal' },
   { source: 'dev-mg-4', target: 'dev-mg-5', type: 'normal' },
   { source: 'dev-mg-5', target: 'dev-mg-6', type: 'normal' },
-  // Cross-over between specialist and manager (optional paths)
+  // Cross-over between specialist and manager (same stage only)
+  { source: 'dev-sp-1', target: 'dev-mg-1', type: 'optional', label: '兼任可' },
   { source: 'dev-sp-2', target: 'dev-mg-2', type: 'optional', label: '兼任可' },
   { source: 'dev-sp-3', target: 'dev-mg-3', type: 'optional', label: '兼任可' },
   { source: 'dev-sp-4', target: 'dev-mg-4', type: 'optional', label: '兼任可' },
   { source: 'dev-sp-5', target: 'dev-mg-5', type: 'optional', label: '兼任可' },
-  // Entry from specialist to manager track
-  { source: 'dev-sp-1', target: 'dev-mg-2', type: 'optional', label: 'マネジメントへ' },
+  { source: 'dev-sp-6', target: 'dev-mg-6', type: 'optional', label: '兼任可' },
 ];
 
-const infrastructureEdges: CareerEdge[] = [
+const infrastructureTemplateEdges: CareerEdge[] = [
   // Specialist chain
   { source: 'infra-sp-1', target: 'infra-sp-2', type: 'normal' },
   { source: 'infra-sp-2', target: 'infra-sp-3', type: 'normal' },
@@ -784,11 +879,27 @@ const infrastructureEdges: CareerEdge[] = [
   { source: 'infra-mg-3', target: 'infra-mg-4', type: 'normal' },
   { source: 'infra-mg-4', target: 'infra-mg-5', type: 'normal' },
   { source: 'infra-mg-5', target: 'infra-mg-6', type: 'normal' },
-  // Entry to manager from specialist
-  { source: 'infra-sp-2', target: 'infra-mg-2', type: 'optional', label: 'マネジメントへ' },
+  // Cross-over between specialist and manager (same stage only)
+  { source: 'infra-sp-2', target: 'infra-mg-2', type: 'optional', label: '兼任可' },
   { source: 'infra-sp-3', target: 'infra-mg-3', type: 'optional', label: '兼任可' },
   { source: 'infra-sp-4', target: 'infra-mg-4', type: 'optional', label: '兼任可' },
   { source: 'infra-sp-5', target: 'infra-mg-5', type: 'optional', label: '兼任可' },
+  { source: 'infra-sp-6', target: 'infra-mg-6', type: 'optional', label: '兼任可' },
+];
+
+const developmentEdges: CareerEdge[] = [
+  ...cloneEdgesForVariant(developmentTemplateEdges, 'dev', 'dev-web'),
+  ...cloneEdgesForVariant(developmentTemplateEdges, 'dev', 'dev-mobile'),
+  // 段階1は Web/モバイル共通
+  { source: 'dev-web-sp-1', target: 'dev-mobile-sp-1', type: 'optional', label: '共通' },
+  { source: 'dev-web-mg-1', target: 'dev-mobile-mg-1', type: 'optional', label: '共通' },
+];
+
+const infrastructureEdges: CareerEdge[] = [
+  ...cloneEdgesForVariant(infrastructureTemplateEdges, 'infra', 'infra-server'),
+  ...cloneEdgesForVariant(infrastructureTemplateEdges, 'infra', 'infra-network'),
+  // 段階1は サーバー/ネットワーク共通
+  { source: 'infra-server-sp-1', target: 'infra-network-sp-1', type: 'optional', label: '共通' },
 ];
 
 const itSupportEdges: CareerEdge[] = [
@@ -818,9 +929,9 @@ const itSupportEdges: CareerEdge[] = [
 // Cross-track edges (connecting different tracks)
 const crossTrackEdges: CareerEdge[] = [
   // ヘルプデスク → インフラ entry
-  { source: 'its-hd-1', target: 'infra-sp-1', type: 'cross-track', label: 'インフラへ' },
+  { source: 'its-hd-1', target: 'infra-server-sp-1', type: 'cross-track', label: 'インフラへ' },
   // PMO支援 → 開発マネジメント entry
-  { source: 'its-pmo-2', target: 'dev-mg-1', type: 'cross-track', label: '開発PMOへ' },
+  { source: 'its-pmo-2', target: 'dev-web-mg-1', type: 'cross-track', label: '開発PMOへ' },
 ];
 
 // ---------------------------------------------------------------------------
