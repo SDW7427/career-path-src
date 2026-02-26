@@ -108,6 +108,9 @@ const StageLaneOverlay: React.FC<StageLaneOverlayProps> = ({ track }) => {
   const separatorXs = groupHeaders
     .slice(0, -1)
     .map((group, idx) => (group.endX + groupHeaders[idx + 1].startX) / 2);
+  const topStageScreenY = STAGE_Y_BASE * zoom + y;
+  const titleTop = Math.max(topStageScreenY - 52, 8);
+  const laneTop = titleTop + 28;
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" style={{ zIndex: 1 }}>
@@ -155,7 +158,7 @@ const StageLaneOverlay: React.FC<StageLaneOverlayProps> = ({ track }) => {
           <div
             className="absolute rounded-md border border-blue-100 bg-blue-50/75"
             style={{
-              top: Math.max(y + 4, 4),
+              top: titleTop - 6,
               left: group.startX * zoom + x,
               width: Math.max((group.endX - group.startX) * zoom, 100),
               height: 46,
@@ -165,7 +168,7 @@ const StageLaneOverlay: React.FC<StageLaneOverlayProps> = ({ track }) => {
           <div
             className="absolute px-3 py-1 rounded-full border border-blue-300 bg-white/95 text-[13px] font-bold text-blue-800 shadow-sm"
             style={{
-              top: 8,
+              top: titleTop,
               left: group.centerX * zoom + x - 72,
             }}
           >
@@ -177,7 +180,7 @@ const StageLaneOverlay: React.FC<StageLaneOverlayProps> = ({ track }) => {
               key={`${group.label}-${lane.label}`}
               className="absolute text-[10px] text-blue-700"
               style={{
-                top: 36,
+                top: laneTop,
                 left: lane.x * zoom + x - 28,
               }}
             >
