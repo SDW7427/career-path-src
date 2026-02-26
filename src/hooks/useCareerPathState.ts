@@ -1,67 +1,48 @@
-import { useState, useMemo, useCallback } from 'react';
-import type {
-  Track,
-  PathType,
-  CareerNode,
-  CareerEdge,
-} from '../types/career';
-import {
-  getNodesByTrack,
-  allEdges,
-  getNodeById,
-} from '../data/careerData';
+import { useCallback, useMemo, useState } from 'react';
+import type { CareerEdge, CareerNode, PathType, Track } from '../types/career';
 
-/**
- * Central state management hook for the career path app.
- * Manages track selection, node selection, search, filters, and derived data.
- */
-export function useCareerPathState() {
-  // --- Core state ---
+export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[]) {
   const [activeTrack, setActiveTrack] = useState<Track>('development');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilters, setActiveFilters] = useState<Set<PathType | 'all'>>(
-    new Set(['all'])
-  );
+  const [activeFilters, setActiveFilters] = useState<Set<PathType | 'all'>>(new Set(['all']));
 
-  // --- Track change handler ---
+  const nodeById = useMemo(() => {
+    const map = new Map<string, CareerNode>();
+    allNodes.forEach((n) => map.set(n.id, n));
+    return map;
+  }, [allNodes]);
+
+  const getNodeById = useCallback((id: string) => nodeById.get(id), [nodeById]);
+
   const handleTrackChange = useCallback((track: Track) => {
     setActiveTrack(track);
-    setSelectedNodeId(null); // Clear selection on track switch
+    setSelectedNodeId(null);
   }, []);
 
-  // --- Filter toggle handler ---
   const handleFilterToggle = useCallback((filter: PathType | 'all') => {
     setActiveFilters((prev) => {
       const next = new Set(prev);
-      if (filter === 'all') {
-        // Toggle "all" clears individual filters
-        return new Set(['all']);
-      }
-      // Remove "all" if selecting individual filter
+
+      if (filter === 'all') return new Set<PathType | 'all'>(['all']);
+
       next.delete('all');
-      if (next.has(filter)) {
-        next.delete(filter);
-      } else {
-        next.add(filter);
-      }
-      // If nothing selected, default back to "all"
+      if (next.has(filter)) next.delete(filter);
+      else next.add(filter);
+
       if (next.size === 0) return new Set<PathType | 'all'>(['all']);
       return next;
     });
   }, []);
 
-  // --- Filtered nodes for current track ---
   const filteredNodes: CareerNode[] = useMemo(() => {
-    let nodes = getNodesByTrack(activeTrack);
+    let nodes = allNodes.filter((n) => n.track === activeTrack);
 
-    // Apply path type filter
     if (!activeFilters.has('all')) {
       const filterTypes = activeFilters as Set<PathType>;
       nodes = nodes.filter((n) => filterTypes.has(n.pathType));
     }
 
-    // Apply search filter
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       nodes = nodes.filter(
@@ -78,18 +59,13 @@ export function useCareerPathState() {
     }
 
     return nodes;
-  }, [activeTrack, activeFilters, searchQuery]);
+  }, [allNodes, activeTrack, activeFilters, searchQuery]);
 
-  // --- Edges for filtered nodes (include cross-track edges that touch our nodes) ---
   const filteredEdges: CareerEdge[] = useMemo(() => {
     const nodeIds = new Set(filteredNodes.map((n) => n.id));
-    // Get edges where BOTH source and target are in our node set
-    return allEdges.filter(
-      (e) => nodeIds.has(e.source) && nodeIds.has(e.target)
-    );
-  }, [filteredNodes]);
+    return allEdges.filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target));
+  }, [allEdges, filteredNodes]);
 
-  // --- Connected nodes for visual highlight ---
   const connectedNodeIds: Set<string> = useMemo(() => {
     if (!selectedNodeId) return new Set();
     const connected = new Set<string>();
@@ -98,29 +74,23 @@ export function useCareerPathState() {
       if (e.target === selectedNodeId) connected.add(e.source);
     });
     return connected;
-  }, [selectedNodeId]);
+  }, [allEdges, selectedNodeId]);
 
-  // --- Selected node detail ---
   const selectedNode: CareerNode | null = useMemo(() => {
     if (!selectedNodeId) return null;
     return getNodeById(selectedNodeId) || null;
-  }, [selectedNodeId]);
+  }, [getNodeById, selectedNodeId]);
 
-  // --- Node click handler (handles cross-track jumps) ---
   const handleNodeClick = useCallback(
     (nodeId: string) => {
       const node = getNodeById(nodeId);
-      if (node && node.track !== activeTrack) {
-        // Cross-track jump: switch tab and select
-        setActiveTrack(node.track);
-      }
+      if (node && node.track !== activeTrack) setActiveTrack(node.track);
       setSelectedNodeId(nodeId);
     },
-    [activeTrack]
+    [activeTrack, getNodeById]
   );
 
   return {
-    // State
     activeTrack,
     selectedNodeId,
     selectedNode,
@@ -129,10 +99,10 @@ export function useCareerPathState() {
     filteredNodes,
     filteredEdges,
     connectedNodeIds,
-    // Handlers
     handleTrackChange,
     handleNodeClick,
     setSearchQuery,
     handleFilterToggle,
+    getNodeById,
   };
 }
