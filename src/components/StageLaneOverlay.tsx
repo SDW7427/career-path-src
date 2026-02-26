@@ -18,6 +18,8 @@ interface LaneHeader {
 interface GroupHeader {
   label: string;
   centerX: number;
+  startX: number;
+  endX: number;
   lanes: LaneHeader[];
 }
 
@@ -28,6 +30,8 @@ function getGroupHeaders(track: Track): GroupHeader[] {
         {
           label: 'Webアプリケーション',
           centerX: 170,
+          startX: 10,
+          endX: 330,
           lanes: [
             { label: 'Specialist', x: 80 },
             { label: 'Manager', x: 260 },
@@ -36,6 +40,8 @@ function getGroupHeaders(track: Track): GroupHeader[] {
         {
           label: 'モバイルアプリ',
           centerX: 590,
+          startX: 430,
+          endX: 750,
           lanes: [
             { label: 'Specialist', x: 500 },
             { label: 'Manager', x: 680 },
@@ -47,6 +53,8 @@ function getGroupHeaders(track: Track): GroupHeader[] {
         {
           label: 'サーバー',
           centerX: 170,
+          startX: 10,
+          endX: 330,
           lanes: [
             { label: 'Specialist', x: 80 },
             { label: 'Manager', x: 260 },
@@ -55,6 +63,8 @@ function getGroupHeaders(track: Track): GroupHeader[] {
         {
           label: 'ネットワーク',
           centerX: 590,
+          startX: 430,
+          endX: 750,
           lanes: [
             { label: 'Specialist', x: 500 },
             { label: 'Manager', x: 680 },
@@ -66,16 +76,22 @@ function getGroupHeaders(track: Track): GroupHeader[] {
         {
           label: 'ITサポート',
           centerX: 100,
+          startX: 20,
+          endX: 180,
           lanes: [{ label: 'Manager', x: 100 }],
         },
         {
           label: '情シス支援',
           centerX: 350,
+          startX: 270,
+          endX: 430,
           lanes: [{ label: 'Manager', x: 350 }],
         },
         {
           label: 'PMO支援',
           centerX: 600,
+          startX: 520,
+          endX: 680,
           lanes: [{ label: 'Manager', x: 600 }],
         },
       ];
@@ -89,9 +105,15 @@ function getGroupHeaders(track: Track): GroupHeader[] {
 const StageLaneOverlay: React.FC<StageLaneOverlayProps> = ({ track }) => {
   const { x, y, zoom } = useViewport();
   const groupHeaders = getGroupHeaders(track);
+  const separatorXs = groupHeaders
+    .slice(0, -1)
+    .map((group, idx) => (group.endX + groupHeaders[idx + 1].startX) / 2);
+  const topStageScreenY = STAGE_Y_BASE * zoom + y;
+  const titleTop = Math.max(topStageScreenY - 52, 8);
+  const laneTop = titleTop + 28;
 
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" style={{ zIndex: 1 }}>
       {STAGES.map((stage) => {
         const rawY = STAGE_Y_BASE + (6 - stage) * STAGE_Y_GAP;
         const screenY = rawY * zoom + y;
@@ -119,23 +141,46 @@ const StageLaneOverlay: React.FC<StageLaneOverlayProps> = ({ track }) => {
         );
       })}
 
+      {separatorXs.map((separatorX, idx) => (
+        <div
+          key={`group-separator-${idx}`}
+          className="absolute border-l border-dashed border-gray-200/90"
+          style={{
+            top: 0,
+            bottom: 0,
+            left: separatorX * zoom + x,
+          }}
+        />
+      ))}
+
       {groupHeaders.map((group) => (
         <React.Fragment key={group.label}>
           <div
-            className="absolute text-[11px] font-semibold text-gray-500"
+            className="absolute rounded-md border border-blue-100 bg-blue-50/75"
             style={{
-              top: Math.max(y + 8, 8),
-              left: group.centerX * zoom + x - 50,
+              top: titleTop - 6,
+              left: group.startX * zoom + x,
+              width: Math.max((group.endX - group.startX) * zoom, 100),
+              height: 46,
+            }}
+          />
+
+          <div
+            className="absolute px-3 py-1 rounded-full border border-blue-300 bg-white/95 text-[13px] font-bold text-blue-800 shadow-sm"
+            style={{
+              top: titleTop,
+              left: group.centerX * zoom + x - 72,
             }}
           >
             {group.label}
           </div>
+
           {group.lanes.map((lane) => (
             <div
               key={`${group.label}-${lane.label}`}
-              className="absolute text-[10px] text-gray-400"
+              className="absolute text-[10px] text-blue-700"
               style={{
-                top: Math.max(y + 24, 24),
+                top: laneTop,
                 left: lane.x * zoom + x - 28,
               }}
             >

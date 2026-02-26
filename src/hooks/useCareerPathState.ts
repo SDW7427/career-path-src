@@ -3,6 +3,7 @@ import type { CareerEdge, CareerNode, PathType, Track } from '../types/career';
 
 export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[]) {
   const [activeTrack, setActiveTrack] = useState<Track>('development');
+  const [activeSubtrack, setActiveSubtrack] = useState<string>('all');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<Set<PathType | 'all'>>(new Set(['all']));
@@ -15,8 +16,25 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
 
   const getNodeById = useCallback((id: string) => nodeById.get(id), [nodeById]);
 
+  const availableSubtracks = useMemo(() => {
+    const labels = new Set<string>();
+    allNodes.forEach((node) => {
+      if (node.track !== activeTrack) return;
+      if (!node.subtrack) return;
+      labels.add(node.subtrack);
+    });
+
+    return Array.from(labels).sort((a, b) => a.localeCompare(b, 'ja'));
+  }, [activeTrack, allNodes]);
+
   const handleTrackChange = useCallback((track: Track) => {
     setActiveTrack(track);
+    setActiveSubtrack('all');
+    setSelectedNodeId(null);
+  }, []);
+
+  const handleSubtrackChange = useCallback((subtrack: string) => {
+    setActiveSubtrack(subtrack);
     setSelectedNodeId(null);
   }, []);
 
@@ -37,6 +55,10 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
 
   const filteredNodes: CareerNode[] = useMemo(() => {
     let nodes = allNodes.filter((n) => n.track === activeTrack);
+
+    if (activeSubtrack !== 'all') {
+      nodes = nodes.filter((n) => n.subtrack === activeSubtrack);
+    }
 
     if (!activeFilters.has('all')) {
       const filterTypes = activeFilters as Set<PathType>;
@@ -59,7 +81,7 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
     }
 
     return nodes;
-  }, [allNodes, activeTrack, activeFilters, searchQuery]);
+  }, [allNodes, activeTrack, activeSubtrack, activeFilters, searchQuery]);
 
   const filteredEdges: CareerEdge[] = useMemo(() => {
     const nodeIds = new Set(filteredNodes.map((n) => n.id));
@@ -84,7 +106,10 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
   const handleNodeClick = useCallback(
     (nodeId: string) => {
       const node = getNodeById(nodeId);
-      if (node && node.track !== activeTrack) setActiveTrack(node.track);
+      if (node && node.track !== activeTrack) {
+        setActiveTrack(node.track);
+        setActiveSubtrack('all');
+      }
       setSelectedNodeId(nodeId);
     },
     [activeTrack, getNodeById]
@@ -92,6 +117,8 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
 
   return {
     activeTrack,
+    activeSubtrack,
+    availableSubtracks,
     selectedNodeId,
     selectedNode,
     searchQuery,
@@ -100,6 +127,7 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
     filteredEdges,
     connectedNodeIds,
     handleTrackChange,
+    handleSubtrackChange,
     handleNodeClick,
     setSearchQuery,
     handleFilterToggle,
