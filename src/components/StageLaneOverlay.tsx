@@ -163,10 +163,10 @@ const StageLaneOverlay: React.FC<StageLaneOverlayProps> = ({ track }) => {
           />
 
           <div
-            className="absolute text-[11px] font-semibold text-blue-800"
+            className="absolute px-3 py-1 rounded-full border border-blue-300 bg-white/95 text-[13px] font-bold text-blue-800 shadow-sm"
             style={{
-              top: Math.max(y + 9, 9),
-              left: group.centerX * zoom + x - 56,
+              top: 8,
+              left: group.centerX * zoom + x - 72,
             }}
           >
             {group.label}
@@ -177,7 +177,7 @@ const StageLaneOverlay: React.FC<StageLaneOverlayProps> = ({ track }) => {
               key={`${group.label}-${lane.label}`}
               className="absolute text-[10px] text-blue-700"
               style={{
-                top: Math.max(y + 26, 26),
+                top: 36,
                 left: lane.x * zoom + x - 28,
               }}
             >
