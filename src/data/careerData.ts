@@ -902,6 +902,21 @@ const infrastructureEdges: CareerEdge[] = [
   { source: 'infra-server-sp-1', target: 'infra-network-sp-1', type: 'optional', label: '共通' },
 ];
 
+const developmentEdges: CareerEdge[] = [
+  ...cloneEdgesForVariant(developmentTemplateEdges, 'dev', 'dev-web'),
+  ...cloneEdgesForVariant(developmentTemplateEdges, 'dev', 'dev-mobile'),
+  // 段階1は Web/モバイル共通
+  { source: 'dev-web-sp-1', target: 'dev-mobile-sp-1', type: 'optional', label: '共通' },
+  { source: 'dev-web-mg-1', target: 'dev-mobile-mg-1', type: 'optional', label: '共通' },
+];
+
+const infrastructureEdges: CareerEdge[] = [
+  ...cloneEdgesForVariant(infrastructureTemplateEdges, 'infra', 'infra-server'),
+  ...cloneEdgesForVariant(infrastructureTemplateEdges, 'infra', 'infra-network'),
+  // 段階1は サーバー/ネットワーク共通
+  { source: 'infra-server-sp-1', target: 'infra-network-sp-1', type: 'optional', label: '共通' },
+];
+
 const itSupportEdges: CareerEdge[] = [
   // ヘルプデスク chain
   { source: 'its-hd-1', target: 'its-hd-2', type: 'normal' },
