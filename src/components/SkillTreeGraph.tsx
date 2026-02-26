@@ -146,7 +146,7 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
           zoomable
         />
         {/* Stage lane labels overlay */}
-        <StageLaneOverlay />
+        <StageLaneOverlay track={track} />
       </ReactFlow>
 
       {/* Legend note */}
