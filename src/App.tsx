@@ -23,9 +23,13 @@ import { allNodes as fallbackNodes, allEdges as fallbackEdges } from './data/car
  * └──────────────────────────┴─────────────────┘
  */
 const App: React.FC = () => {
-  const [data, setData] = useState<CareerDataSet>({ nodes: fallbackNodes, edges: fallbackEdges });
+  const [data, setData] = useState<CareerDataSet>({
+    nodes: fallbackNodes,
+    edges: fallbackEdges,
+  });
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Load from Google Sheets (CSV) on mount
   useEffect(() => {
     let cancelled = false;
 
@@ -38,10 +42,8 @@ const App: React.FC = () => {
         }
       } catch (e) {
         if (!cancelled) {
-          setLoadError(
-            e instanceof Error ? e.message : 'Failed to load data from Google Sheets.'
-          );
-          // fallback 유지
+          setLoadError(e instanceof Error ? e.message : 'Failed to load data from Google Sheets.');
+          // fallback data stays
         }
       }
     })();
@@ -69,6 +71,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
+      {/* Header */}
       <header className="border-b bg-white">
         <div className="max-w-[1400px] mx-auto px-5 py-4 flex items-center justify-between gap-4">
           <div>
@@ -94,6 +97,7 @@ const App: React.FC = () => {
         )}
       </header>
 
+      {/* Control Bar */}
       <div className="max-w-[1400px] mx-auto px-5 py-3">
         <ControlBar
           searchQuery={searchQuery}
@@ -103,6 +107,7 @@ const App: React.FC = () => {
         />
       </div>
 
+      {/* Main */}
       <main className="max-w-[1400px] mx-auto px-5 pb-6 flex gap-4">
         <section className="flex-[2] bg-white rounded-lg border overflow-hidden">
           <SkillTreeGraph
@@ -116,11 +121,7 @@ const App: React.FC = () => {
         </section>
 
         <aside className="flex-[1] bg-white rounded-lg border overflow-hidden">
-           <DetailPanel
-            node={selectedNode}
-            onNodeClick={handleNodeClick}
-            getNodeById={getNodeById}
-           />
+          <DetailPanel node={selectedNode} onNodeClick={handleNodeClick} getNodeById={getNodeById} />
         </aside>
       </main>
     </div>
