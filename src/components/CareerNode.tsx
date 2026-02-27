@@ -47,7 +47,10 @@ const CareerNodeComponent: React.FC<NodeProps> = ({ data }) => {
   return (
     <div className={classes}>
       {/* Handles for edges */}
-      <Handle type="target" position={Position.Bottom} className="!w-2 !h-2 !bg-gray-300 !border-0" />
+      <Handle id="target-top" type="target" position={Position.Top} className="!w-2 !h-2 !bg-gray-300 !border-0" />
+      <Handle id="target-bottom" type="target" position={Position.Bottom} className="!w-2 !h-2 !bg-gray-300 !border-0" />
+      <Handle id="target-left" type="target" position={Position.Left} className="!w-2 !h-2 !bg-gray-300 !border-0" />
+      <Handle id="target-right" type="target" position={Position.Right} className="!w-2 !h-2 !bg-gray-300 !border-0" />
 
       {/* Stage + path badges */}
       <div className="flex items-center gap-1 mb-1">
@@ -67,7 +70,10 @@ const CareerNodeComponent: React.FC<NodeProps> = ({ data }) => {
         </div>
       )}
 
-      <Handle type="source" position={Position.Top} className="!w-2 !h-2 !bg-gray-300 !border-0" />
+      <Handle id="source-top" type="source" position={Position.Top} className="!w-2 !h-2 !bg-gray-300 !border-0" />
+      <Handle id="source-bottom" type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-gray-300 !border-0" />
+      <Handle id="source-left" type="source" position={Position.Left} className="!w-2 !h-2 !bg-gray-300 !border-0" />
+      <Handle id="source-right" type="source" position={Position.Right} className="!w-2 !h-2 !bg-gray-300 !border-0" />
     </div>
   );
 };
