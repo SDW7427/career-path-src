@@ -33,14 +33,15 @@ const stageY = (stage: number) => BASE_Y + (6 - stage) * STAGE_Y_GAP;
 
 const DEV_SP_X = 180;  // Specialist column
 const DEV_MG_X = 480;  // Manager column
+const DEV_COMMON_X = (DEV_SP_X + DEV_MG_X) / 2;
 
 const developmentTemplateNodes: CareerNode[] = [
-  // --- Specialist ---
+  // --- Common (段階1は共通) ---
   {
-    id: 'dev-sp-1',
+    id: 'dev-common-1',
     track: 'development',
     stage: 1,
-    pathType: 'specialist',
+    pathType: 'common',
     titleJa: 'プログラム改修／テスト',
     shortLabel: '改修/テスト',
     summary: '既存プログラムの改修やテスト実施を担当。コーディング基礎とテスト手法を習得する段階。',
@@ -50,8 +51,9 @@ const developmentTemplateNodes: CareerNode[] = [
     toolsEnvironmentsLanguages: ['Java', 'Python', 'Git', 'Eclipse/VSCode', 'JUnit'],
     nextStepConditions: ['テスト実務6ヶ月以上', '単体テスト設計可能', 'バグ修正を自力で完了できる'],
     tags: ['FE', 'BE', 'FS', 'Web', '業務系・基幹'],
-    position: { x: DEV_SP_X, y: stageY(1) },
+    position: { x: DEV_COMMON_X, y: stageY(1) },
   },
+  // --- Specialist ---
   {
     id: 'dev-sp-2',
     track: 'development',
@@ -138,24 +140,6 @@ const developmentTemplateNodes: CareerNode[] = [
   },
 
   // --- Manager ---
-  {
-    id: 'dev-mg-1',
-    track: 'development',
-    stage: 1,
-    pathType: 'manager',
-    titleJa: 'PMO補佐',
-    shortLabel: 'PMO補佐',
-    summary: 'プロジェクト管理事務の補佐。議事録、課題管理、進捗報告の補助を担当。',
-    requiredSkills: ['議事録作成', '課題管理', 'Excel/スプレッドシート'],
-    requiredExperience: ['IT基礎研修修了'],
-    recommendedCerts: ['基本情報技術者'],
-    toolsEnvironmentsLanguages: ['Excel', 'Backlog', 'Redmine', 'Teams'],
-    nextStepConditions: ['PMO補佐実務6ヶ月以上', '議事録を正確に作成できる'],
-    tags: ['PMO'],
-    branchNote: '※暫定、後で見直す可能性あり',
-    position: { x: DEV_MG_X, y: stageY(1) },
-    styleKey: 'provisional',
-  },
   {
     id: 'dev-mg-2',
     track: 'development',
@@ -479,7 +463,12 @@ function cloneNodesForVariant(
       id.startsWith(`${originalPrefix}-`) ? toVariantId(id, originalPrefix, variant.idPrefix) : id
     ),
     position: {
-      x: node.pathType === 'specialist' ? variant.specialistX : variant.managerX,
+      x:
+        node.pathType === 'specialist'
+          ? variant.specialistX
+          : node.pathType === 'manager'
+            ? variant.managerX
+            : (variant.specialistX + variant.managerX) / 2,
       y: stageY(node.stage),
     },
   }));
@@ -768,7 +757,6 @@ const itSupportNodes: CareerNode[] = [
     toolsEnvironmentsLanguages: ['Jira', 'Confluence', 'Excel', 'Power BI基礎'],
     nextStepConditions: ['定型PMO業務を単独で実施可能'],
     tags: ['PMO'],
-    relatedNodeIds: ['dev-mg-1'],
     position: { x: ITS_PMO_X, y: stageY(2) },
   },
   {
@@ -846,20 +834,20 @@ const itSupportNodes: CareerNode[] = [
 // ---------------------------------------------------------------------------
 
 const developmentTemplateEdges: CareerEdge[] = [
+  // 段階1（共通）→ 段階2（Specialist / Manager）
+  { source: 'dev-common-1', target: 'dev-sp-2', type: 'normal' },
+  { source: 'dev-common-1', target: 'dev-mg-2', type: 'normal' },
   // Specialist chain
-  { source: 'dev-sp-1', target: 'dev-sp-2', type: 'normal' },
   { source: 'dev-sp-2', target: 'dev-sp-3', type: 'normal' },
   { source: 'dev-sp-3', target: 'dev-sp-4', type: 'normal' },
   { source: 'dev-sp-4', target: 'dev-sp-5', type: 'normal' },
   { source: 'dev-sp-5', target: 'dev-sp-6', type: 'normal' },
   // Manager chain
-  { source: 'dev-mg-1', target: 'dev-mg-2', type: 'normal' },
   { source: 'dev-mg-2', target: 'dev-mg-3', type: 'normal' },
   { source: 'dev-mg-3', target: 'dev-mg-4', type: 'normal' },
   { source: 'dev-mg-4', target: 'dev-mg-5', type: 'normal' },
   { source: 'dev-mg-5', target: 'dev-mg-6', type: 'normal' },
   // Cross-over between specialist and manager (same stage only)
-  { source: 'dev-sp-1', target: 'dev-mg-1', type: 'optional', label: '兼任可' },
   { source: 'dev-sp-2', target: 'dev-mg-2', type: 'optional', label: '兼任可' },
   { source: 'dev-sp-3', target: 'dev-mg-3', type: 'optional', label: '兼任可' },
   { source: 'dev-sp-4', target: 'dev-mg-4', type: 'optional', label: '兼任可' },
@@ -891,7 +879,7 @@ const developmentEdges: CareerEdge[] = [
   ...cloneEdgesForVariant(developmentTemplateEdges, 'dev', 'dev-web'),
   ...cloneEdgesForVariant(developmentTemplateEdges, 'dev', 'dev-mobile'),
   // 段階1は Web/モバイル共通
-  { source: 'dev-web-sp-1', target: 'dev-mobile-sp-1', type: 'optional', label: '共通' },
+  { source: 'dev-web-common-1', target: 'dev-mobile-common-1', type: 'optional', label: '共通' },
 ];
 
 const infrastructureEdges: CareerEdge[] = [
@@ -930,7 +918,7 @@ const crossTrackEdges: CareerEdge[] = [
   // ヘルプデスク → インフラ entry
   { source: 'its-hd-1', target: 'infra-server-sp-1', type: 'cross-track', label: 'インフラへ' },
   // PMO支援 → 開発マネジメント entry
-  { source: 'its-pmo-2', target: 'dev-web-mg-1', type: 'cross-track', label: '開発PMOへ' },
+  { source: 'its-pmo-2', target: 'dev-web-mg-2', type: 'cross-track', label: '開発PMOへ' },
 ];
 
 // ---------------------------------------------------------------------------

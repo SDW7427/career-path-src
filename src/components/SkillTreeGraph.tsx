@@ -106,7 +106,8 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
               ? { stroke: '#94a3b8', strokeDasharray: '6 4' }
               : { stroke: '#94a3b8' },
         labelStyle: { fontSize: 10, fill: '#64748b' },
-        type: ce.type === 'optional' ? 'straight' : 'smoothstep',
+        // 段階の進行エッジ（例: 段階1→2）は直線で描画したい
+        type: ce.type === 'cross-track' ? 'smoothstep' : 'straight',
       };
     });
   }, [careerEdges, careerNodes]);
