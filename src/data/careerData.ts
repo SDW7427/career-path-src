@@ -892,22 +892,6 @@ const developmentEdges: CareerEdge[] = [
   ...cloneEdgesForVariant(developmentTemplateEdges, 'dev', 'dev-mobile'),
   // 段階1は Web/モバイル共通
   { source: 'dev-web-sp-1', target: 'dev-mobile-sp-1', type: 'optional', label: '共通' },
-  { source: 'dev-web-mg-1', target: 'dev-mobile-mg-1', type: 'optional', label: '共通' },
-];
-
-const infrastructureEdges: CareerEdge[] = [
-  ...cloneEdgesForVariant(infrastructureTemplateEdges, 'infra', 'infra-server'),
-  ...cloneEdgesForVariant(infrastructureTemplateEdges, 'infra', 'infra-network'),
-  // 段階1は サーバー/ネットワーク共通
-  { source: 'infra-server-sp-1', target: 'infra-network-sp-1', type: 'optional', label: '共通' },
-];
-
-const developmentEdges: CareerEdge[] = [
-  ...cloneEdgesForVariant(developmentTemplateEdges, 'dev', 'dev-web'),
-  ...cloneEdgesForVariant(developmentTemplateEdges, 'dev', 'dev-mobile'),
-  // 段階1は Web/モバイル共通
-  { source: 'dev-web-sp-1', target: 'dev-mobile-sp-1', type: 'optional', label: '共通' },
-  { source: 'dev-web-mg-1', target: 'dev-mobile-mg-1', type: 'optional', label: '共通' },
 ];
 
 const infrastructureEdges: CareerEdge[] = [
@@ -959,12 +943,50 @@ export const allNodes: CareerNode[] = [
   ...itSupportNodes,
 ];
 
-export const allEdges: CareerEdge[] = [
+const rawAllEdges: CareerEdge[] = [
   ...developmentEdges,
   ...infrastructureEdges,
   ...itSupportEdges,
   ...crossTrackEdges,
 ];
+
+const nodeById = new Map(allNodes.map((node) => [node.id, node] as const));
+
+const progressionEdges: CareerEdge[] = rawAllEdges.filter((edge) => {
+  const sourceNode = nodeById.get(edge.source);
+  const targetNode = nodeById.get(edge.target);
+
+  if (!sourceNode || !targetNode) return false;
+
+  // Keep progression edges only within the same classification (subtrack) across different stages.
+  return sourceNode.subtrack === targetNode.subtrack && sourceNode.stage !== targetNode.stage;
+});
+
+const coexistenceEdges: CareerEdge[] = [];
+const byTrackStageSubtrack = new Map<string, { specialistId?: string; managerId?: string }>();
+
+allNodes.forEach((node) => {
+  if (!node.subtrack) return;
+  const key = `${node.track}::${node.subtrack}::${node.stage}`;
+  const bucket = byTrackStageSubtrack.get(key) ?? {};
+
+  if (node.pathType === 'specialist') bucket.specialistId = node.id;
+  if (node.pathType === 'manager') bucket.managerId = node.id;
+
+  byTrackStageSubtrack.set(key, bucket);
+});
+
+byTrackStageSubtrack.forEach((bucket) => {
+  if (!bucket.specialistId || !bucket.managerId) return;
+  coexistenceEdges.push({
+    source: bucket.specialistId,
+    target: bucket.managerId,
+    type: 'optional',
+    label: '兼任可',
+  });
+});
+
+export const allEdges: CareerEdge[] = [...progressionEdges, ...coexistenceEdges];
 
 export const fullDataSet: CareerDataSet = {
   nodes: allNodes,
