@@ -20,6 +20,13 @@
   --color-its: #8b5cf6;          /* violet-500 */
   --color-its-light: #ede9fe;    /* violet-100 */
   --color-its-ring: #7c3aed;     /* violet-600 */
+
+  /* Path type fills (reference: original zip) */
+  --color-specialist: #f0f9ff;   /* sky-50 */
+  --color-manager: #fefce8;      /* yellow-50 */
+  --color-common: #f9fafb;       /* gray-50 */
+  /* Midpoint between specialist and manager (段階1 共通ノード用) */
+  --color-common-mid: #f7faf4;
 }
 
 /* Ensure the page fills viewport */
@@ -98,39 +105,33 @@ html, body, #root {
   border-color: var(--color-its);
 }
 
-/* Node background fills (make the background clearly visible)
-   - Keep borders solid for both Specialist/Manager
-   - Use track accent tints so each track is visually distinct
-*/
-.career-node.track-development.path-common {
-  background-color: #eff6ff; /* blue-50 */
-}
-.career-node.track-development.path-specialist {
-  background-color: #dbeafe; /* blue-100 */
-}
-.career-node.track-development.path-manager {
-  background-color: #bfdbfe; /* blue-200 */
-}
+/* ============================================================
+   Node background fills (development & infrastructure)
+   ============================================================ */
 
-.career-node.track-infrastructure.path-common {
-  background-color: #ecfeff; /* cyan-50 */
-}
+/* Specialist / Manager background colors (dev + infra only) */
+.career-node.track-development.path-specialist,
 .career-node.track-infrastructure.path-specialist {
-  background-color: #cffafe; /* cyan-100 */
-}
-.career-node.track-infrastructure.path-manager {
-  background-color: #a5f3fc; /* cyan-200 */
+  background: var(--color-specialist);
 }
 
-.career-node.track-it-support.path-common {
-  background-color: #f5f3ff; /* violet-50 */
+.career-node.track-development.path-manager,
+.career-node.track-infrastructure.path-manager {
+  background: var(--color-manager);
 }
-.career-node.track-it-support.path-specialist {
-  background-color: #ede9fe; /* violet-100 */
+
+/* Common nodes (dev + infra) */
+.career-node.track-development.path-common,
+.career-node.track-infrastructure.path-common {
+  background: var(--color-common);
 }
-.career-node.track-it-support.path-manager {
-  background-color: #ddd6fe; /* violet-200 */
+
+/* 段階1 共通ノードは Specialist/Manager の中間色 */
+.career-node.track-development.path-common.stage-1,
+.career-node.track-infrastructure.path-common.stage-1 {
+  background: var(--color-common-mid);
 }
+
 
 /* Selected node */
 .career-node.selected {
