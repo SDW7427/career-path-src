@@ -75,18 +75,41 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
 
   // Convert CareerEdge[] → React Flow Edge[]
   const rfEdges: Edge[] = useMemo(() => {
-    return careerEdges.map((ce, idx) => ({
-      id: `e-${ce.source}-${ce.target}-${idx}`,
-      source: ce.source,
-      target: ce.target,
-      className: edgeClassName(ce.type),
-      label: ce.label || undefined,
-      animated: ce.type === 'cross-track',
-      style: ce.type === 'cross-track' ? { stroke: '#f59e0b' } : ce.type === 'optional' ? { stroke: '#94a3b8', strokeDasharray: '6 4' } : { stroke: '#94a3b8' },
-      labelStyle: { fontSize: 10, fill: '#64748b' },
-      type: 'smoothstep',
-    }));
-  }, [careerEdges]);
+    const nodeMeta = new Map(careerNodes.map((node) => [node.id, node]));
+
+    return careerEdges.map((ce, idx) => {
+      const sourceNode = nodeMeta.get(ce.source);
+      const targetNode = nodeMeta.get(ce.target);
+      const isSameStage =
+        sourceNode !== undefined &&
+        targetNode !== undefined &&
+        sourceNode.stage === targetNode.stage;
+
+      const sourceIsLeft =
+        sourceNode !== undefined && targetNode !== undefined
+          ? sourceNode.position.x <= targetNode.position.x
+          : true;
+
+      return {
+        id: `e-${ce.source}-${ce.target}-${idx}`,
+        source: ce.source,
+        target: ce.target,
+        sourceHandle: isSameStage ? (sourceIsLeft ? 'source-right' : 'source-left') : 'source-top',
+        targetHandle: isSameStage ? (sourceIsLeft ? 'target-left' : 'target-right') : 'target-bottom',
+        className: edgeClassName(ce.type),
+        label: ce.label || undefined,
+        animated: ce.type === 'cross-track',
+        style:
+          ce.type === 'cross-track'
+            ? { stroke: '#f59e0b' }
+            : ce.type === 'optional'
+              ? { stroke: '#94a3b8', strokeDasharray: '6 4' }
+              : { stroke: '#94a3b8' },
+        labelStyle: { fontSize: 10, fill: '#64748b' },
+        type: ce.type === 'optional' ? 'straight' : 'smoothstep',
+      };
+    });
+  }, [careerEdges, careerNodes]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges);
@@ -146,7 +169,7 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
           zoomable
         />
         {/* Stage lane labels overlay */}
-        <StageLaneOverlay />
+        <StageLaneOverlay track={track} />
       </ReactFlow>
 
       {/* Legend note */}

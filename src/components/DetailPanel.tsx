@@ -49,6 +49,18 @@ const BulletList: React.FC<{ items: string[] }> = ({ items }) => {
   );
 };
 
+/** Use tags for short lists, bullets for long / sentence-like lists */
+const SmartList: React.FC<{ items: string[]; tagColor?: string }> = ({ items, tagColor }) => {
+  const shouldUseBullets =
+    items.length > 12 || items.some((x) => (x ?? '').length >= 26);
+
+  return shouldUseBullets ? (
+    <BulletList items={items} />
+  ) : (
+    <TagList items={items} color={tagColor} />
+  );
+};
+
 /**
  * Right-side detail panel showing full information for the selected career node.
  * Shows a placeholder when no node is selected.
@@ -129,12 +141,12 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
 
       {/* Summary */}
       <Section title="概要">
-        <p className="text-sm text-gray-600 leading-relaxed">{node.summary}</p>
+        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{node.summary}</p>
       </Section>
 
       {/* Required Skills */}
       <Section title="必要スキル">
-        <TagList items={node.requiredSkills} color="bg-blue-50 text-blue-700" />
+        <SmartList items={node.requiredSkills} tagColor="bg-blue-50 text-blue-700" />
       </Section>
 
       {/* Required Experience */}
@@ -144,12 +156,12 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
 
       {/* Recommended Certifications */}
       <Section title="推奨資格">
-        <TagList items={node.recommendedCerts} color="bg-green-50 text-green-700" />
+        <SmartList items={node.recommendedCerts} tagColor="bg-green-50 text-green-700" />
       </Section>
 
       {/* Tools / Environments / Languages */}
       <Section title="ツール・環境・言語">
-        <TagList items={node.toolsEnvironmentsLanguages} color="bg-gray-50 text-gray-600" />
+        <SmartList items={node.toolsEnvironmentsLanguages} tagColor="bg-gray-50 text-gray-600" />
       </Section>
 
       {/* Next Step Conditions */}
@@ -167,7 +179,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
       {/* Branch / Coexist Note */}
       {node.branchNote && (
         <Section title="兼任/分岐メモ">
-          <p className="text-xs text-amber-600 bg-amber-50 rounded px-2 py-1">
+          <p className="text-xs text-amber-600 bg-amber-50 rounded px-2 py-1 whitespace-pre-line">
             {node.branchNote}
           </p>
         </Section>
