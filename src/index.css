@@ -20,11 +20,6 @@
   --color-its: #8b5cf6;          /* violet-500 */
   --color-its-light: #ede9fe;    /* violet-100 */
   --color-its-ring: #7c3aed;     /* violet-600 */
-
-  /* Path type modifiers */
-  --color-specialist: #f0f9ff;   /* sky-50 */
-  --color-manager: #fefce8;      /* yellow-50 */
-  --color-common: #f9fafb;       /* gray-50 */
 }
 
 /* Ensure the page fills viewport */
@@ -103,16 +98,38 @@ html, body, #root {
   border-color: var(--color-its);
 }
 
-/* Path type fills */
-.career-node.path-specialist {
-  background: var(--color-specialist);
+/* Node background fills (make the background clearly visible)
+   - Keep borders solid for both Specialist/Manager
+   - Use track accent tints so each track is visually distinct
+*/
+.career-node.track-development.path-common {
+  background-color: #eff6ff; /* blue-50 */
 }
-.career-node.path-manager {
-  background: var(--color-manager);
-  border-style: dashed;
+.career-node.track-development.path-specialist {
+  background-color: #dbeafe; /* blue-100 */
 }
-.career-node.path-common {
-  background: var(--color-common);
+.career-node.track-development.path-manager {
+  background-color: #bfdbfe; /* blue-200 */
+}
+
+.career-node.track-infrastructure.path-common {
+  background-color: #ecfeff; /* cyan-50 */
+}
+.career-node.track-infrastructure.path-specialist {
+  background-color: #cffafe; /* cyan-100 */
+}
+.career-node.track-infrastructure.path-manager {
+  background-color: #a5f3fc; /* cyan-200 */
+}
+
+.career-node.track-it-support.path-common {
+  background-color: #f5f3ff; /* violet-50 */
+}
+.career-node.track-it-support.path-specialist {
+  background-color: #ede9fe; /* violet-100 */
+}
+.career-node.track-it-support.path-manager {
+  background-color: #ddd6fe; /* violet-200 */
 }
 
 /* Selected node */
@@ -136,8 +153,9 @@ html, body, #root {
 
 /* Provisional / provisional style */
 .career-node.style-provisional {
-  border-style: dotted;
-  opacity: 0.85;
+  /* Keep solid border (ユーザー要望: 点線ではなく実線) */
+  border-style: solid;
+  opacity: 0.9;
 }
 
 /* Stage badge */

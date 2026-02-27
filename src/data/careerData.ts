@@ -248,10 +248,9 @@ const infrastructureTemplateNodes: CareerNode[] = [
     toolsEnvironmentsLanguages: ['Windows', 'Active Directory基礎', 'ServiceDesk'],
     nextStepConditions: ['オペレーター実務6ヶ月以上'],
     tags: ['サーバ', 'ネットワーク'],
-    branchNote: '※暫定（ITサポートとの接続を表現したい）',
+    branchNote: '※ITサポートとの接続を表現したい',
     relatedNodeIds: ['its-hd-1'],
     position: { x: INFRA_COMMON_X, y: stageY(1) },
-    styleKey: 'provisional',
   },
   // --- Specialist ---
   {
@@ -640,6 +639,24 @@ const itSupportNodes: CareerNode[] = [
 
   // --- 情シス支援 ---
   {
+    id: 'its-js-1',
+    track: 'it-support',
+    subtrack: '情シス支援',
+    stage: 1,
+    pathType: 'manager',
+    titleJa: '情シス補助（アシスタント）',
+    shortLabel: '情シス補助',
+    summary: '情シス業務の補助。アカウント発行、端末管理、問い合わせ一次切り分けなどを担当。',
+    requiredSkills: ['PC基本操作', '問い合わせ対応', 'アカウント管理補助'],
+    requiredExperience: ['IT基礎研修修了'],
+    recommendedCerts: ['ITパスポート'],
+    toolsEnvironmentsLanguages: ['Windows', 'Microsoft 365', 'Active Directory基礎'],
+    nextStepConditions: ['基本作業を単独で実施できる'],
+    tags: ['情シス'],
+    relatedNodeIds: ['its-hd-1'],
+    position: { x: ITS_JS_X, y: stageY(1) },
+  },
+  {
     id: 'its-js-2',
     track: 'it-support',
     subtrack: '情シス支援',
@@ -901,6 +918,7 @@ const itSupportEdges: CareerEdge[] = [
   { source: 'its-hd-4', target: 'its-hd-5', type: 'normal' },
   { source: 'its-hd-5', target: 'its-hd-6', type: 'normal' },
   // 情シス支援 chain
+  { source: 'its-js-1', target: 'its-js-2', type: 'normal' },
   { source: 'its-js-2', target: 'its-js-3', type: 'normal' },
   { source: 'its-js-3', target: 'its-js-4', type: 'normal' },
   { source: 'its-js-4', target: 'its-js-5', type: 'normal' },
