@@ -25,8 +25,8 @@
   --color-specialist: #f0f9ff;   /* sky-50 */
   --color-manager: #fefce8;      /* yellow-50 */
   --color-common: #f9fafb;       /* gray-50 */
-  /* Midpoint between specialist and manager (段階1 共通ノード用) */
-  --color-common-mid: #f7faf4;
+  /* 段階1 ノード背景 */
+  --color-stage1: #F7FBF4;
 }
 
 /* Ensure the page fills viewport */
@@ -89,6 +89,11 @@ html, body, #root {
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
+/* Manager トラックのノードは点線（どのトラック/分類でも共通） */
+.career-node.path-manager {
+  border-style: dashed;
+}
+
 .career-node:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.10);
   transform: translateY(-1px);
@@ -126,10 +131,9 @@ html, body, #root {
   background: var(--color-common);
 }
 
-/* 段階1 共通ノードは Specialist/Manager の中間色 */
-.career-node.track-development.path-common.stage-1,
-.career-node.track-infrastructure.path-common.stage-1 {
-  background: var(--color-common-mid);
+/* 段階1 ノードは共通色（Specialist/Manager の中間） */
+.career-node.stage-1 {
+  background: var(--color-stage1) !important;
 }
 
 
@@ -154,8 +158,6 @@ html, body, #root {
 
 /* Provisional / provisional style */
 .career-node.style-provisional {
-  /* Keep solid border (ユーザー要望: 点線ではなく実線) */
-  border-style: solid;
   opacity: 0.9;
 }
 
