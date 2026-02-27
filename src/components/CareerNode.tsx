@@ -47,7 +47,7 @@ const CareerNodeComponent: React.FC<NodeProps> = ({ data }) => {
   return (
     <div className={classes}>
       {/* Handles for edges */}
-      <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-gray-300 !border-0" />
+      <Handle type="target" position={Position.Bottom} className="!w-2 !h-2 !bg-gray-300 !border-0" />
 
       {/* Stage + path badges */}
       <div className="flex items-center gap-1 mb-1">
@@ -67,7 +67,7 @@ const CareerNodeComponent: React.FC<NodeProps> = ({ data }) => {
         </div>
       )}
 
-      <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-gray-300 !border-0" />
+      <Handle type="source" position={Position.Top} className="!w-2 !h-2 !bg-gray-300 !border-0" />
     </div>
   );
 };
