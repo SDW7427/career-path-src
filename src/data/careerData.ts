@@ -230,18 +230,19 @@ const developmentTemplateNodes: CareerNode[] = [
 
 const INFRA_SP_X = 180;
 const INFRA_MG_X = 480;
+const INFRA_COMMON_X = (INFRA_SP_X + INFRA_MG_X) / 2;
 
 const infrastructureTemplateNodes: CareerNode[] = [
-  // --- Specialist ---
+  // --- Common (段階1は共通) ---
   {
-    id: 'infra-sp-1',
+    id: 'infra-common-1',
     track: 'infrastructure',
     stage: 1,
-    pathType: 'specialist',
-    titleJa: 'キッティング・ヘルプデスク（オペレーター）',
-    shortLabel: 'キッティング/HD',
-    summary: 'PC設定、ヘルプデスク対応、基本的なIT運用を担当。ITサポートとの接続ポイント。',
-    requiredSkills: ['PC基本操作', 'ヘルプデスク対応', 'キッティング作業'],
+    pathType: 'common',
+    titleJa: '運用監視補助・ヘルプデスク',
+    shortLabel: '運用監視補助/HD',
+    summary: '監視・運用の補助とヘルプデスク一次対応。インフラ運用の入口として基礎を固める段階。',
+    requiredSkills: ['PC基本操作', 'ヘルプデスク対応', '監視補助', 'キッティング作業'],
     requiredExperience: ['IT基礎研修修了'],
     recommendedCerts: ['ITパスポート', 'CompTIA A+'],
     toolsEnvironmentsLanguages: ['Windows', 'Active Directory基礎', 'ServiceDesk'],
@@ -249,9 +250,10 @@ const infrastructureTemplateNodes: CareerNode[] = [
     tags: ['サーバ', 'ネットワーク'],
     branchNote: '※暫定（ITサポートとの接続を表現したい）',
     relatedNodeIds: ['its-hd-1'],
-    position: { x: INFRA_SP_X, y: stageY(1) },
+    position: { x: INFRA_COMMON_X, y: stageY(1) },
     styleKey: 'provisional',
   },
+  // --- Specialist ---
   {
     id: 'infra-sp-2',
     track: 'infrastructure',
@@ -547,7 +549,7 @@ const itSupportNodes: CareerNode[] = [
     toolsEnvironmentsLanguages: ['Windows', 'ServiceNow', 'Teams'],
     nextStepConditions: ['オペレーター実務6ヶ月以上'],
     tags: ['ヘルプデスク'],
-    relatedNodeIds: ['infra-server-sp-1', 'infra-network-sp-1'],
+    relatedNodeIds: ['infra-server-common-1', 'infra-network-common-1'],
     position: { x: ITS_HD_X, y: stageY(1) },
   },
   {
@@ -856,8 +858,10 @@ const developmentTemplateEdges: CareerEdge[] = [
 ];
 
 const infrastructureTemplateEdges: CareerEdge[] = [
+  // 段階1（共通）→ 段階2（Specialist / Manager）
+  { source: 'infra-common-1', target: 'infra-sp-2', type: 'normal' },
+  { source: 'infra-common-1', target: 'infra-mg-2', type: 'normal' },
   // Specialist chain
-  { source: 'infra-sp-1', target: 'infra-sp-2', type: 'normal' },
   { source: 'infra-sp-2', target: 'infra-sp-3', type: 'normal' },
   { source: 'infra-sp-3', target: 'infra-sp-4', type: 'normal' },
   { source: 'infra-sp-4', target: 'infra-sp-5', type: 'normal' },
@@ -886,7 +890,7 @@ const infrastructureEdges: CareerEdge[] = [
   ...cloneEdgesForVariant(infrastructureTemplateEdges, 'infra', 'infra-server'),
   ...cloneEdgesForVariant(infrastructureTemplateEdges, 'infra', 'infra-network'),
   // 段階1は サーバー/ネットワーク共通
-  { source: 'infra-server-sp-1', target: 'infra-network-sp-1', type: 'optional', label: '共通' },
+  { source: 'infra-server-common-1', target: 'infra-network-common-1', type: 'optional', label: '共通' },
 ];
 
 const itSupportEdges: CareerEdge[] = [
@@ -916,7 +920,7 @@ const itSupportEdges: CareerEdge[] = [
 // Cross-track edges (connecting different tracks)
 const crossTrackEdges: CareerEdge[] = [
   // ヘルプデスク → インフラ entry
-  { source: 'its-hd-1', target: 'infra-server-sp-1', type: 'cross-track', label: 'インフラへ' },
+  { source: 'its-hd-1', target: 'infra-server-common-1', type: 'cross-track', label: 'インフラへ' },
   // PMO支援 → 開発マネジメント entry
   { source: 'its-pmo-2', target: 'dev-web-mg-2', type: 'cross-track', label: '開発PMOへ' },
 ];
