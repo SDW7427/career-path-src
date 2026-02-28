@@ -39,36 +39,38 @@ const SubtrackTabs: React.FC<SubtrackTabsProps> = ({
   if (subtracks.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 min-w-0">
       {showLabel && <span className={`text-xs font-semibold ${theme.badge}`}>分類</span>}
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          onClick={() => onSubtrackChange('all')}
-          className={`px-3 py-1 rounded-full text-xs border transition-all ${
-            activeSubtrack === 'all'
-              ? theme.active
-              : `bg-white text-gray-600 border-gray-200 ${theme.hover}`
-          }`}
-        >
-          すべて
-        </button>
+      <div className="w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="inline-flex min-w-max gap-1.5">
+          <button
+            onClick={() => onSubtrackChange('all')}
+            className={`whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] md:px-3 md:text-xs border transition-all ${
+              activeSubtrack === 'all'
+                ? theme.active
+                : `bg-white text-gray-600 border-gray-200 ${theme.hover}`
+            }`}
+          >
+            すべて
+          </button>
 
-        {subtracks.map((subtrack) => {
-          const isActive = activeSubtrack === subtrack;
-          return (
-            <button
-              key={subtrack}
-              onClick={() => onSubtrackChange(subtrack)}
-              className={`px-3 py-1 rounded-full text-xs border transition-all ${
-                isActive
-                  ? theme.active
-                  : `bg-white text-gray-600 border-gray-200 ${theme.hover}`
-              }`}
-            >
-              {subtrack}
-            </button>
-          );
-        })}
+          {subtracks.map((subtrack) => {
+            const isActive = activeSubtrack === subtrack;
+            return (
+              <button
+                key={subtrack}
+                onClick={() => onSubtrackChange(subtrack)}
+                className={`whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] md:px-3 md:text-xs border transition-all ${
+                  isActive
+                    ? theme.active
+                    : `bg-white text-gray-600 border-gray-200 ${theme.hover}`
+                }`}
+              >
+                {subtrack}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

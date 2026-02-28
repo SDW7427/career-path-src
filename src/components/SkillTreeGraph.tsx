@@ -24,6 +24,8 @@ interface SkillTreeGraphProps {
   connectedNodeIds: Set<string>;
   track: Track;
   onNodeClick: (nodeId: string) => void;
+  showMiniMap?: boolean;
+  showControls?: boolean;
 }
 
 /** Map CareerEdge.type to CSS class */
@@ -51,6 +53,8 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   connectedNodeIds,
   track,
   onNodeClick,
+  showMiniMap = true,
+  showControls = true,
 }) => {
   // Convert CareerNode[] → React Flow Node[]
   const rfNodes: Node[] = useMemo(() => {
@@ -158,17 +162,21 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         nodesDraggable={false}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
-        <Controls
-          showInteractive={false}
-          className="!bg-white !border-gray-200 !shadow-sm"
-        />
-        <MiniMap
-          nodeColor={minimapColor}
-          maskColor="rgba(0,0,0,0.08)"
-          className="!bg-white !border-gray-200"
-          pannable
-          zoomable
-        />
+        {showControls && (
+          <Controls
+            showInteractive={false}
+            className="!bg-white !border-gray-200 !shadow-sm"
+          />
+        )}
+        {showMiniMap && (
+          <MiniMap
+            nodeColor={minimapColor}
+            maskColor="rgba(0,0,0,0.08)"
+            className="!bg-white !border-gray-200"
+            pannable
+            zoomable
+          />
+        )}
         {/* Stage lane labels overlay */}
         <StageLaneOverlay track={track} />
       </ReactFlow>
