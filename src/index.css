@@ -228,3 +228,18 @@ html, body, #root {
   pointer-events: none;
   z-index: 0;
 }
+
+/* Small-screen refinements */
+@media (max-width: 768px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  .career-node {
+    min-width: 110px;
+    max-width: 148px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+}

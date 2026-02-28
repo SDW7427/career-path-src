@@ -26,30 +26,28 @@ const TRACK_COLORS: Record<Track, { active: string; hover: string; ring: string 
   },
 };
 
-/**
- * Track selector tabs — 開発 / インフラ / ITサポート
- * Displayed prominently in the header area.
- */
 const TrackTabs: React.FC<TrackTabsProps> = ({ activeTrack, onTrackChange }) => {
   return (
-    <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-      {TRACKS.map((track) => {
-        const isActive = track === activeTrack;
-        const colors = TRACK_COLORS[track];
-        return (
-          <button
-            key={track}
-            onClick={() => onTrackChange(track)}
-            className={`
-              px-5 py-2 rounded-md text-sm font-semibold transition-all duration-150 
-              focus:outline-none focus:ring-2 ${colors.ring}
-              ${isActive ? colors.active + ' shadow-sm' : 'text-gray-600 ' + colors.hover}
-            `}
-          >
-            {TRACK_LABELS[track]}
-          </button>
-        );
-      })}
+    <div className="w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      <div className="inline-flex min-w-max gap-1 bg-gray-100 p-1 rounded-lg">
+        {TRACKS.map((track) => {
+          const isActive = track === activeTrack;
+          const colors = TRACK_COLORS[track];
+          return (
+            <button
+              key={track}
+              onClick={() => onTrackChange(track)}
+              className={`
+                whitespace-nowrap px-3 py-1.5 text-xs md:px-5 md:py-2 md:text-sm rounded-md font-semibold transition-all duration-150
+                focus:outline-none focus:ring-2 ${colors.ring}
+                ${isActive ? colors.active + ' shadow-sm' : 'text-gray-600 ' + colors.hover}
+              `}
+            >
+              {TRACK_LABELS[track]}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };
