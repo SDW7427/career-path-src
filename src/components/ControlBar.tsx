@@ -1,7 +1,7 @@
 import React from 'react';
 import { type PathType, PATH_TYPE_LABELS } from '../types/career';
 
-interface ControlBarProps {
+export interface ControlBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   activeFilters: Set<PathType | 'all'>;
@@ -15,20 +15,16 @@ const FILTER_OPTIONS: { key: PathType | 'all'; label: string }[] = [
   { key: 'common', label: PATH_TYPE_LABELS.common },
 ];
 
-/**
- * Search box + filter chips bar.
- * Located below the header, above the main content area.
- */
-const ControlBar: React.FC<ControlBarProps> = ({
+export const ControlBarContent: React.FC<ControlBarProps & { showLegend?: boolean }> = ({
   searchQuery,
   onSearchChange,
   activeFilters,
   onFilterToggle,
+  showLegend = true,
 }) => {
   return (
-    <div className="flex items-center gap-4 px-5 py-2 bg-white border-b border-gray-100">
-      {/* Search */}
-      <div className="relative flex-shrink-0">
+    <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+      <div className="relative w-full md:w-auto md:flex-shrink-0">
         <svg
           className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400"
           fill="none"
@@ -42,7 +38,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
           placeholder="ノード名 / スキル検索..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-md w-56 
+          className="w-full pl-8 pr-8 py-2 text-xs border border-gray-200 rounded-md md:w-56 md:py-1.5
                      focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300
                      placeholder:text-gray-300"
         />
@@ -58,8 +54,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
         )}
       </div>
 
-      {/* Filter chips */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-[10px] text-gray-400 mr-1">フィルター:</span>
         {FILTER_OPTIONS.map(({ key, label }) => {
           const isActive = activeFilters.has(key);
@@ -80,29 +75,42 @@ const ControlBar: React.FC<ControlBarProps> = ({
         })}
       </div>
 
-      {/* Legend */}
-      <div className="ml-auto flex items-center gap-3 text-[10px] text-gray-400">
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-sm bg-sky-50 border border-blue-300 inline-block" />
-          Specialist
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-sm bg-yellow-50 border border-amber-300 border-dashed inline-block" />
-          Manager
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-sm bg-gray-50 border border-gray-300 inline-block" />
-          共通
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-5 h-px bg-gray-400 inline-block" style={{ borderTop: '1.5px dashed #94a3b8' }} />
-          兼任可
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-5 h-px inline-block" style={{ borderTop: '1.5px dashed #f59e0b' }} />
-          クロストラック
-        </span>
-      </div>
+      {showLegend && (
+        <div className="md:ml-auto flex flex-wrap items-center gap-3 text-[10px] text-gray-400">
+          <span className="flex items-center gap-1">
+            <span className="w-2.5 h-2.5 rounded-sm bg-sky-50 border border-blue-300 inline-block" />
+            Specialist
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2.5 h-2.5 rounded-sm bg-yellow-50 border border-amber-300 border-dashed inline-block" />
+            Manager
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2.5 h-2.5 rounded-sm bg-gray-50 border border-gray-300 inline-block" />
+            共通
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-5 h-px bg-gray-400 inline-block" style={{ borderTop: '1.5px dashed #94a3b8' }} />
+            兼任可
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-5 h-px inline-block" style={{ borderTop: '1.5px dashed #f59e0b' }} />
+            クロストラック
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Search box + filter chips bar.
+ * Located below the header, above the main content area.
+ */
+const ControlBar: React.FC<ControlBarProps> = (props) => {
+  return (
+    <div className="px-5 py-2 bg-white border-b border-gray-100">
+      <ControlBarContent {...props} />
     </div>
   );
 };
