@@ -40,7 +40,7 @@ const SubtrackTabs: React.FC<SubtrackTabsProps> = ({
 
   return (
     <div className="flex items-center gap-2 min-w-0">
-      {showLabel && <span className={`text-xs font-semibold ${theme.badge}`}>分類</span>}
+      {showLabel && <span className={`text-xs font-semibold whitespace-nowrap ${theme.badge}`}>分類</span>}
       <div className="w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <div className="inline-flex min-w-max gap-1.5">
           <button
