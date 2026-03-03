@@ -6,6 +6,7 @@ import SkillTreeGraph from './components/SkillTreeGraph';
 import DetailPanel from './components/DetailPanel';
 import MobileDetailDrawer from './components/MobileDetailDrawer';
 import MobileFilterDrawer from './components/MobileFilterDrawer';
+import MobileGestureTutorial from './components/MobileGestureTutorial';
 import { useCareerPathState } from './hooks/useCareerPathState';
 import { TRACK_LABELS, type CareerDataSet } from './types/career';
 import { loadCareerDataFromSheets } from './data/loadCareerDataFromSheets';
@@ -19,6 +20,7 @@ const App: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [showMobileTutorial, setShowMobileTutorial] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,6 +75,24 @@ const App: React.FC = () => {
       setIsMobileDetailOpen(false);
     }
   }, [selectedNode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
+    const hasSeenTutorial = window.localStorage.getItem('career-mobile-tutorial-seen') === '1';
+
+    if (isMobileViewport && !hasSeenTutorial) {
+      setShowMobileTutorial(true);
+    }
+  }, []);
+
+  const closeMobileTutorial = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('career-mobile-tutorial-seen', '1');
+    }
+    setShowMobileTutorial(false);
+  };
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
@@ -186,6 +206,11 @@ const App: React.FC = () => {
           onSearchChange={setSearchQuery}
           activeFilters={activeFilters}
           onFilterToggle={handleFilterToggle}
+        />
+
+        <MobileGestureTutorial
+          open={showMobileTutorial}
+          onClose={closeMobileTutorial}
         />
       </div>
     </div>
