@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useEffect } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -11,6 +11,7 @@ import {
   type NodeMouseHandler,
   BackgroundVariant,
   type ColorMode,
+  type ReactFlowInstance,
 } from '@xyflow/react';
 import CareerNodeComponent from './CareerNode';
 import type { CareerNodeData } from './CareerNode';
@@ -24,6 +25,8 @@ interface SkillTreeGraphProps {
   connectedNodeIds: Set<string>;
   track: Track;
   onNodeClick: (nodeId: string) => void;
+  showMiniMap?: boolean;
+  showControls?: boolean;
 }
 
 /** Map CareerEdge.type to CSS class */
@@ -51,6 +54,8 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   connectedNodeIds,
   track,
   onNodeClick,
+  showMiniMap = true,
+  showControls = true,
 }) => {
   // Convert CareerNode[] → React Flow Node[]
   const rfNodes: Node[] = useMemo(() => {
@@ -114,6 +119,8 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges);
+  const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
+  const didFitRef = useRef(false);
 
   // Sync when source data changes (track switch, selection change)
   useEffect(() => {
@@ -140,6 +147,37 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
     }
   }, [track]);
 
+
+  useEffect(() => {
+    if (didFitRef.current) return;
+    if (nodes.length === 0) return;
+
+    const inst = rfInstanceRef.current;
+    if (!inst) return;
+
+    let cancelled = false;
+
+    const runFit = () => {
+      if (cancelled || didFitRef.current) return;
+      requestAnimationFrame(() => {
+        if (cancelled || didFitRef.current) return;
+        inst.fitView({ padding: 0.3 });
+        didFitRef.current = true;
+      });
+    };
+
+    const fontsReady = document.fonts?.ready;
+    if (fontsReady) {
+      void fontsReady.then(runFit).catch(runFit);
+    } else {
+      runFit();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nodes.length]);
+
   return (
     <div className="w-full h-full relative">
       <ReactFlow
@@ -148,9 +186,8 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
+        onInit={(inst) => { rfInstanceRef.current = inst; }}
         nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.3 }}
         minZoom={0.3}
         maxZoom={1.5}
         colorMode={'light' as ColorMode}
@@ -158,17 +195,21 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         nodesDraggable={false}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
-        <Controls
-          showInteractive={false}
-          className="!bg-white !border-gray-200 !shadow-sm"
-        />
-        <MiniMap
-          nodeColor={minimapColor}
-          maskColor="rgba(0,0,0,0.08)"
-          className="!bg-white !border-gray-200"
-          pannable
-          zoomable
-        />
+        {showControls && (
+          <Controls
+            showInteractive={false}
+            className="!bg-white !border-gray-200 !shadow-sm"
+          />
+        )}
+        {showMiniMap && (
+          <MiniMap
+            nodeColor={minimapColor}
+            maskColor="rgba(0,0,0,0.08)"
+            className="!bg-white !border-gray-200"
+            pannable
+            zoomable
+          />
+        )}
         {/* Stage lane labels overlay */}
         <StageLaneOverlay track={track} />
       </ReactFlow>

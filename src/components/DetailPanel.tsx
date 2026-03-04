@@ -15,6 +15,25 @@ interface DetailPanelProps {
   getNodeById: (nodeId: string) => CareerNode | undefined;
 }
 
+interface ParsedGroup {
+  title: string;
+  items: string[];
+}
+
+interface ParsedSection {
+  title: string;
+  items: string[];
+  groups: ParsedGroup[];
+}
+
+interface ParsedStructuredText {
+  sections: ParsedSection[];
+}
+
+const SECTION_MARKER_RE = /^[【〖](.+)[】〗]$/;
+const SUBHEADER_RE = /^[A-Z]\.\s+/;
+const BULLET_PREFIX_RE = /^[\s・●•▪◦◉◆◇※*\-－ー]+/;
+
 /** Section wrapper for consistency */
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div className="mb-4">
@@ -61,6 +80,102 @@ const SmartList: React.FC<{ items: string[]; tagColor?: string }> = ({ items, ta
   );
 };
 
+function parseStructuredText(text: string): ParsedStructuredText | null {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) return null;
+
+  let currentSection: ParsedSection | null = null;
+  let currentGroup: ParsedGroup | null = null;
+  const sections: ParsedSection[] = [];
+  let hasMarkerOrSubheader = false;
+
+  const ensureSection = (): ParsedSection => {
+    if (currentSection) return currentSection;
+    const fallbackSection: ParsedSection = { title: 'その他', items: [], groups: [] };
+    sections.push(fallbackSection);
+    currentSection = fallbackSection;
+    return fallbackSection;
+  };
+
+  for (const line of lines) {
+    const markerMatch = line.match(SECTION_MARKER_RE);
+    if (markerMatch) {
+      hasMarkerOrSubheader = true;
+      const section: ParsedSection = {
+        title: markerMatch[1].trim(),
+        items: [],
+        groups: [],
+      };
+      sections.push(section);
+      currentSection = section;
+      currentGroup = null;
+      continue;
+    }
+
+    if (SUBHEADER_RE.test(line)) {
+      hasMarkerOrSubheader = true;
+      const section = ensureSection();
+      const group: ParsedGroup = {
+        title: line,
+        items: [],
+      };
+      section.groups.push(group);
+      currentGroup = group;
+      continue;
+    }
+
+    const normalized = line.replace(BULLET_PREFIX_RE, '').trim();
+    if (!normalized) continue;
+
+    if (currentGroup) {
+      currentGroup.items.push(normalized);
+    } else {
+      ensureSection().items.push(normalized);
+    }
+  }
+
+  if (!hasMarkerOrSubheader) return null;
+  return { sections };
+}
+
+function shouldUseChipList(items: string[]): boolean {
+  if (!items.length) return false;
+  if (items.length > 12) return false;
+  return items.every((item) => item.length <= 18 && !item.includes('。'));
+}
+
+const StructuredContent: React.FC<{ parsed: ParsedStructuredText; chipColor?: string }> = ({ parsed, chipColor }) => {
+  const renderItems = (items: string[]) => {
+    if (shouldUseChipList(items)) {
+      return <TagList items={items} color={chipColor} />;
+    }
+    return <BulletList items={items} />;
+  };
+
+  return (
+    <div className="space-y-3">
+      {parsed.sections.map((section, sectionIndex) => (
+        <div key={`${section.title}-${sectionIndex}`} className="space-y-2">
+          <h5 className="text-[11px] font-bold text-gray-500">{section.title}</h5>
+
+          {section.items.length > 0 && renderItems(section.items)}
+
+          {section.groups.map((group, groupIndex) => (
+            <div key={`${group.title}-${groupIndex}`} className="space-y-1.5">
+              <h6 className="text-[11px] font-semibold text-gray-500">{group.title}</h6>
+              {renderItems(group.items)}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 /**
  * Right-side detail panel showing full information for the selected career node.
  * Shows a placeholder when no node is selected.
@@ -83,6 +198,11 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
       </div>
     );
   }
+
+  const summaryStructured = parseStructuredText(node.summary);
+  const requiredSkillsStructured = parseStructuredText(node.requiredSkills.join('\n'));
+  const requiredExperienceStructured = parseStructuredText(node.requiredExperience.join('\n'));
+  const recommendedCertsStructured = parseStructuredText(node.recommendedCerts.join('\n'));
 
   const trackColorClass = {
     development: 'bg-blue-500',
@@ -141,22 +261,38 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
 
       {/* Summary */}
       <Section title="概要">
-        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{node.summary}</p>
+        {summaryStructured ? (
+          <StructuredContent parsed={summaryStructured} />
+        ) : (
+          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{node.summary}</p>
+        )}
       </Section>
 
       {/* Required Skills */}
       <Section title="必要スキル">
-        <SmartList items={node.requiredSkills} tagColor="bg-blue-50 text-blue-700" />
+        {requiredSkillsStructured ? (
+          <StructuredContent parsed={requiredSkillsStructured} chipColor="bg-blue-50 text-blue-700" />
+        ) : (
+          <SmartList items={node.requiredSkills} tagColor="bg-blue-50 text-blue-700" />
+        )}
       </Section>
 
       {/* Required Experience */}
       <Section title="必要経験">
-        <BulletList items={node.requiredExperience} />
+        {requiredExperienceStructured ? (
+          <StructuredContent parsed={requiredExperienceStructured} />
+        ) : (
+          <BulletList items={node.requiredExperience} />
+        )}
       </Section>
 
       {/* Recommended Certifications */}
       <Section title="推奨資格">
-        <SmartList items={node.recommendedCerts} tagColor="bg-green-50 text-green-700" />
+        {recommendedCertsStructured ? (
+          <StructuredContent parsed={recommendedCertsStructured} chipColor="bg-green-50 text-green-700" />
+        ) : (
+          <SmartList items={node.recommendedCerts} tagColor="bg-green-50 text-green-700" />
+        )}
       </Section>
 
       {/* Tools / Environments / Languages */}
