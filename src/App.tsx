@@ -7,43 +7,34 @@ import DetailPanel from './components/DetailPanel';
 import MobileDetailDrawer from './components/MobileDetailDrawer';
 import MobileFilterDrawer from './components/MobileFilterDrawer';
 import MobileGestureTutorial from './components/MobileGestureTutorial';
+import LoadingSkeleton from './components/LoadingSkeleton';
 import { useCareerPathState } from './hooks/useCareerPathState';
 import { TRACK_LABELS, type CareerDataSet } from './types/career';
 import { loadCareerDataFromSheets } from './data/loadCareerDataFromSheets';
-import { allNodes as fallbackNodes, allEdges as fallbackEdges } from './data/careerData';
 
 const App: React.FC = () => {
-  const [data, setData] = useState<CareerDataSet>({
-    nodes: fallbackNodes,
-    edges: fallbackEdges,
-  });
+  const [data, setData] = useState<CareerDataSet | null>(null);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [showMobileTutorial, setShowMobileTutorial] = useState(false);
 
+  const loadData = async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const ds = await loadCareerDataFromSheets();
+      setData(ds);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'Failed to load data from Google Sheets.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const ds = await loadCareerDataFromSheets();
-        if (!cancelled) {
-          setData(ds);
-          setLoadError(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setLoadError(
-            e instanceof Error ? e.message : 'Failed to load data from Google Sheets.'
-          );
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    void loadData();
   }, []);
 
   const {
@@ -63,7 +54,36 @@ const App: React.FC = () => {
     setSearchQuery,
     handleFilterToggle,
     getNodeById,
-  } = useCareerPathState(data.nodes, data.edges);
+  } = useCareerPathState(data?.nodes ?? [], data?.edges ?? []);
+
+  const handleGraphNodeClick = (nodeId: string) => {
+    handleNodeClick(nodeId);
+    setIsMobileDetailOpen(true);
+  };
+
+  useEffect(() => {
+    if (!selectedNode) {
+      setIsMobileDetailOpen(false);
+    }
+  }, [selectedNode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
+    const hasSeenTutorial = window.localStorage.getItem('career-mobile-tutorial-seen') === '1';
+
+    if (isMobileViewport && !hasSeenTutorial) {
+      setShowMobileTutorial(true);
+    }
+  }, []);
+
+  const closeMobileTutorial = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('career-mobile-tutorial-seen', '1');
+    }
+    setShowMobileTutorial(false);
+  };
 
   const handleGraphNodeClick = (nodeId: string) => {
     handleNodeClick(nodeId);
@@ -139,8 +159,18 @@ const App: React.FC = () => {
         </div>
 
         {loadError && (
-          <div className="mt-2 text-[11px] bg-amber-50 text-amber-800 border border-amber-200 rounded px-3 py-2">
-            Sheetsからの読み込みに失敗したため、ローカルデータを表示中：{loadError}
+          <div className="mt-2 flex justify-end">
+            <button
+              type="button"
+              onClick={() => void loadData()}
+              className="rounded-md border border-gray-200 bg-white p-1.5 text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              aria-label="Retry loading"
+              title="Retry"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582M20 20v-5h-.581M5.153 9A8.001 8.001 0 0119 8m-.153 7A8.001 8.001 0 015 16" />
+              </svg>
+            </button>
           </div>
         )}
       </header>
@@ -154,65 +184,73 @@ const App: React.FC = () => {
         />
       </div>
 
-      <div className="hidden md:flex flex-1 overflow-hidden">
-        <div className="flex-[2] min-w-0 border-r border-gray-200 bg-white">
-          <SkillTreeGraph
-            careerNodes={filteredNodes}
-            careerEdges={filteredEdges}
-            selectedNodeId={selectedNodeId}
-            connectedNodeIds={connectedNodeIds}
-            track={activeTrack}
-            onNodeClick={handleGraphNodeClick}
-            showMiniMap
-            showControls
-          />
+      {loading ? (
+        <div className="flex-1 overflow-hidden">
+          <LoadingSkeleton />
         </div>
+      ) : (
+        <>
+          <div className="hidden md:flex flex-1 overflow-hidden">
+            <div className="flex-[2] min-w-0 border-r border-gray-200 bg-white">
+              <SkillTreeGraph
+                careerNodes={filteredNodes}
+                careerEdges={filteredEdges}
+                selectedNodeId={selectedNodeId}
+                connectedNodeIds={connectedNodeIds}
+                track={activeTrack}
+                onNodeClick={handleGraphNodeClick}
+                showMiniMap
+                showControls
+              />
+            </div>
 
-        <div className="flex-[1] min-w-[320px] max-w-[420px] bg-white border-l border-gray-100">
-          <DetailPanel
-            node={selectedNode}
-            onNodeClick={handleGraphNodeClick}
-            getNodeById={getNodeById}
-          />
-        </div>
-      </div>
+            <div className="flex-[1] min-w-[320px] max-w-[420px] bg-white border-l border-gray-100">
+              <DetailPanel
+                node={selectedNode}
+                onNodeClick={handleGraphNodeClick}
+                getNodeById={getNodeById}
+              />
+            </div>
+          </div>
 
-      <div className="md:hidden flex-1 relative overflow-hidden">
-        <div className="absolute inset-0 bg-white">
-          <SkillTreeGraph
-            careerNodes={filteredNodes}
-            careerEdges={filteredEdges}
-            selectedNodeId={selectedNodeId}
-            connectedNodeIds={connectedNodeIds}
-            track={activeTrack}
-            onNodeClick={handleGraphNodeClick}
-            showMiniMap={false}
-            showControls={false}
-          />
-        </div>
+          <div className="md:hidden flex-1 relative overflow-hidden">
+            <div className="absolute inset-0 bg-white">
+              <SkillTreeGraph
+                careerNodes={filteredNodes}
+                careerEdges={filteredEdges}
+                selectedNodeId={selectedNodeId}
+                connectedNodeIds={connectedNodeIds}
+                track={activeTrack}
+                onNodeClick={handleGraphNodeClick}
+                showMiniMap={false}
+                showControls={false}
+              />
+            </div>
 
-        <MobileDetailDrawer
-          open={isMobileDetailOpen}
-          node={selectedNode}
-          onClose={() => setIsMobileDetailOpen(false)}
-          onNodeClick={handleGraphNodeClick}
-          getNodeById={getNodeById}
-        />
+            <MobileDetailDrawer
+              open={isMobileDetailOpen}
+              node={selectedNode}
+              onClose={() => setIsMobileDetailOpen(false)}
+              onNodeClick={handleGraphNodeClick}
+              getNodeById={getNodeById}
+            />
 
-        <MobileFilterDrawer
-          open={isMobileFilterOpen}
-          onClose={() => setIsMobileFilterOpen(false)}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          activeFilters={activeFilters}
-          onFilterToggle={handleFilterToggle}
-        />
+            <MobileFilterDrawer
+              open={isMobileFilterOpen}
+              onClose={() => setIsMobileFilterOpen(false)}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              activeFilters={activeFilters}
+              onFilterToggle={handleFilterToggle}
+            />
 
-        <MobileGestureTutorial
-          open={showMobileTutorial}
-          onClose={closeMobileTutorial}
-        />
-      </div>
+            <MobileGestureTutorial
+              open={showMobileTutorial}
+              onClose={closeMobileTutorial}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 };

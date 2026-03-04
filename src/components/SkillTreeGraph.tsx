@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useEffect } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -11,6 +11,7 @@ import {
   type NodeMouseHandler,
   BackgroundVariant,
   type ColorMode,
+  type ReactFlowInstance,
 } from '@xyflow/react';
 import CareerNodeComponent from './CareerNode';
 import type { CareerNodeData } from './CareerNode';
@@ -118,6 +119,8 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges);
+  const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
+  const didFitRef = useRef(false);
 
   // Sync when source data changes (track switch, selection change)
   useEffect(() => {
@@ -144,6 +147,37 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
     }
   }, [track]);
 
+
+  useEffect(() => {
+    if (didFitRef.current) return;
+    if (nodes.length === 0) return;
+
+    const inst = rfInstanceRef.current;
+    if (!inst) return;
+
+    let cancelled = false;
+
+    const runFit = () => {
+      if (cancelled || didFitRef.current) return;
+      requestAnimationFrame(() => {
+        if (cancelled || didFitRef.current) return;
+        inst.fitView({ padding: 0.3 });
+        didFitRef.current = true;
+      });
+    };
+
+    const fontsReady = document.fonts?.ready;
+    if (fontsReady) {
+      void fontsReady.then(runFit).catch(runFit);
+    } else {
+      runFit();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nodes.length]);
+
   return (
     <div className="w-full h-full relative">
       <ReactFlow
@@ -152,9 +186,8 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
+        onInit={(inst) => { rfInstanceRef.current = inst; }}
         nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.3 }}
         minZoom={0.3}
         maxZoom={1.5}
         colorMode={'light' as ColorMode}
