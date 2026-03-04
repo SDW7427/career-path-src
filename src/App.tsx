@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import TrackTabs from './components/TrackTabs';
 import ControlBar from './components/ControlBar';
 import SubtrackTabs from './components/SubtrackTabs';
@@ -19,6 +19,7 @@ const App: React.FC = () => {
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [showMobileTutorial, setShowMobileTutorial] = useState(false);
+  const hasCheckedMobileTutorialRef = useRef(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -67,16 +68,19 @@ const App: React.FC = () => {
     }
   }, [selectedNode]);
 
+  // Decide whether to show the mobile tutorial AFTER data is loaded.
+  // (If we check on mount, the UI might still be in loading skeleton state and the
+  // tutorial can be missed or never rendered.)
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (loading) return;
+    if (hasCheckedMobileTutorialRef.current) return;
+    hasCheckedMobileTutorialRef.current = true;
 
     const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
     const hasSeenTutorial = window.localStorage.getItem('career-mobile-tutorial-seen') === '1';
-
-    if (isMobileViewport && !hasSeenTutorial) {
-      setShowMobileTutorial(true);
-    }
-  }, []);
+    setShowMobileTutorial(isMobileViewport && !hasSeenTutorial);
+  }, [loading]);
 
   const closeMobileTutorial = () => {
     if (typeof window !== 'undefined') {
