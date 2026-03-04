@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -119,7 +119,11 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges);
-  const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
+
+  // IMPORTANT: useState here (not only useRef) so that fitView logic reruns after onInit.
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
+
+  // Fit once per *visible node set* (track/subtrack changes), not for selection/highlight changes.
   const lastFitSigRef = useRef<string>('');
 
   // Sync when source data changes (track switch, selection change)
@@ -141,19 +145,20 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   // Track-specific minimap colors
   const minimapColor = useMemo(() => {
     switch (track) {
-      case 'development': return '#3b82f6';
-      case 'infrastructure': return '#06b6d4';
-      case 'it-support': return '#8b5cf6';
+      case 'development':
+        return '#3b82f6';
+      case 'infrastructure':
+        return '#06b6d4';
+      case 'it-support':
+        return '#8b5cf6';
     }
   }, [track]);
 
-
-  // Fit view once per *visible node set* (track/filter changes),
-  // but NOT on selection/highlight changes.
+  // Signature based only on visible node IDs
   const fitSignature = useMemo(() => rfNodes.map((n) => n.id).join('|'), [rfNodes]);
 
   useEffect(() => {
-    const inst = rfInstanceRef.current;
+    const inst = rfInstance;
     if (!inst) return;
     if (nodes.length === 0) return;
 
@@ -170,25 +175,37 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
       return w > 0 && h > 0;
     };
 
-    const tryFit = () => {
+    const isMobile = () => {
+      if (typeof window === 'undefined') return false;
+      return window.matchMedia?.('(max-width: 767px)').matches ?? false;
+    };
+
+    const runFit = () => {
       if (cancelled) return;
 
-      // Wait until nodes are actually measured; otherwise fitView can be off-center/over-zoomed.
       const currentNodes = inst.getNodes?.() ?? [];
       const ready = currentNodes.length > 0 && currentNodes.every(isNodeMeasured);
 
       attempts += 1;
-      if (!ready && attempts < 90) {
-        rafId = requestAnimationFrame(tryFit);
+      if (!ready && attempts < 120) {
+        rafId = requestAnimationFrame(runFit);
         return;
       }
 
-      const isMobile = window.matchMedia?.('(max-width: 767px)').matches ?? false;
-
-      // Desktop: more zoomed-out; Mobile: more zoomed-in.
-      const padding = isMobile ? 0.16 : 0.52;
+      // Desktop: zoom OUT more (bigger padding). Mobile: zoom IN a bit.
+      const padding = isMobile() ? 0.14 : 0.40;
 
       inst.fitView({ padding });
+
+      // Extra micro-adjust for desktop: keep it visually centered in the left canvas.
+      // (fitView sometimes feels left-biased when node positions start near x=0)
+      if (!isMobile()) {
+        const vp = inst.getViewport?.();
+        if (vp) {
+          inst.setViewport({ x: vp.x + 24, y: vp.y + 8, zoom: vp.zoom }, { duration: 0 });
+        }
+      }
+
       lastFitSigRef.current = fitSignature;
     };
 
@@ -197,11 +214,14 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
       // Two-phase paint: wait for React commit + layout.
       requestAnimationFrame(() => {
         if (cancelled) return;
-        rafId = requestAnimationFrame(tryFit);
+        rafId = requestAnimationFrame(runFit);
       });
     };
 
-    const fontsReady = document.fonts?.ready;
+    const fontsReady = (typeof document !== 'undefined' && (document as any).fonts?.ready) as
+      | Promise<unknown>
+      | undefined;
+
     if (fontsReady) {
       void fontsReady.then(run).catch(run);
     } else {
@@ -212,7 +232,7 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
       cancelled = true;
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [fitSignature, nodes.length]);
+  }, [rfInstance, fitSignature, nodes.length]);
 
   return (
     <div className="w-full h-full relative">
@@ -222,7 +242,7 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
-        onInit={(inst) => { rfInstanceRef.current = inst; }}
+        onInit={(inst) => setRfInstance(inst)}
         nodeTypes={nodeTypes}
         minZoom={0.3}
         maxZoom={1.5}
@@ -232,10 +252,7 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
         {showControls && (
-          <Controls
-            showInteractive={false}
-            className="!bg-white !border-gray-200 !shadow-sm"
-          />
+          <Controls showInteractive={false} className="!bg-white !border-gray-200 !shadow-sm" />
         )}
         {showMiniMap && (
           <MiniMap
