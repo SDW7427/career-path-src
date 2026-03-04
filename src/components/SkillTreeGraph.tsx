@@ -161,7 +161,9 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
       if (cancelled || didFitRef.current) return;
       requestAnimationFrame(() => {
         if (cancelled || didFitRef.current) return;
-        inst.fitView({ padding: 0.3 });
+        const isMobile = window.matchMedia?.('(max-width: 767px)').matches ?? false;
+        const padding = isMobile ? 0.16 : 0.34;
+        inst.fitView({ padding });
         didFitRef.current = true;
       });
     };
