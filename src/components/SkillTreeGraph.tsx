@@ -120,7 +120,7 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges);
   const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
-  const didFitRef = useRef(false);
+  const lastFitSigRef = useRef<string>('');
 
   // Sync when source data changes (track switch, selection change)
   useEffect(() => {
@@ -148,37 +148,71 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   }, [track]);
 
 
-  useEffect(() => {
-    if (didFitRef.current) return;
-    if (nodes.length === 0) return;
+  // Fit view once per *visible node set* (track/filter changes),
+  // but NOT on selection/highlight changes.
+  const fitSignature = useMemo(() => rfNodes.map((n) => n.id).join('|'), [rfNodes]);
 
+  useEffect(() => {
     const inst = rfInstanceRef.current;
     if (!inst) return;
+    if (nodes.length === 0) return;
+
+    // If the visible node set didn't change, never refit.
+    if (lastFitSigRef.current === fitSignature) return;
 
     let cancelled = false;
+    let rafId = 0;
+    let attempts = 0;
 
-    const runFit = () => {
-      if (cancelled || didFitRef.current) return;
+    const isNodeMeasured = (n: any) => {
+      const w = n?.measured?.width ?? n?.width ?? 0;
+      const h = n?.measured?.height ?? n?.height ?? 0;
+      return w > 0 && h > 0;
+    };
+
+    const tryFit = () => {
+      if (cancelled) return;
+
+      // Wait until nodes are actually measured; otherwise fitView can be off-center/over-zoomed.
+      const currentNodes = inst.getNodes?.() ?? [];
+      const ready = currentNodes.length > 0 && currentNodes.every(isNodeMeasured);
+
+      attempts += 1;
+      if (!ready && attempts < 90) {
+        rafId = requestAnimationFrame(tryFit);
+        return;
+      }
+
+      const isMobile = window.matchMedia?.('(max-width: 767px)').matches ?? false;
+
+      // Desktop: more zoomed-out; Mobile: more zoomed-in.
+      const padding = isMobile ? 0.16 : 0.52;
+
+      inst.fitView({ padding });
+      lastFitSigRef.current = fitSignature;
+    };
+
+    const run = () => {
+      if (cancelled) return;
+      // Two-phase paint: wait for React commit + layout.
       requestAnimationFrame(() => {
-        if (cancelled || didFitRef.current) return;
-        const isMobile = window.matchMedia?.('(max-width: 767px)').matches ?? false;
-        const padding = isMobile ? 0.16 : 0.34;
-        inst.fitView({ padding });
-        didFitRef.current = true;
+        if (cancelled) return;
+        rafId = requestAnimationFrame(tryFit);
       });
     };
 
     const fontsReady = document.fonts?.ready;
     if (fontsReady) {
-      void fontsReady.then(runFit).catch(runFit);
+      void fontsReady.then(run).catch(run);
     } else {
-      runFit();
+      run();
     }
 
     return () => {
       cancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [nodes.length]);
+  }, [fitSignature, nodes.length]);
 
   return (
     <div className="w-full h-full relative">
