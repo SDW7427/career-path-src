@@ -21,6 +21,8 @@ const App: React.FC = () => {
   const [showMobileTutorial, setShowMobileTutorial] = useState(false);
   const hasCheckedMobileTutorialRef = useRef(false);
 
+  const TUTORIAL_KEY = 'career-mobile-tutorial-seen:v4';
+
   const loadData = async () => {
     setLoading(true);
     setLoadError(null);
@@ -78,13 +80,27 @@ const App: React.FC = () => {
     hasCheckedMobileTutorialRef.current = true;
 
     const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
-    const hasSeenTutorial = window.localStorage.getItem('career-mobile-tutorial-seen') === '1';
-    setShowMobileTutorial(isMobileViewport && !hasSeenTutorial);
+    if (!isMobileViewport) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const forceTutorial = params.get('tutorial') === '1';
+
+    if (forceTutorial) {
+      setShowMobileTutorial(true);
+      return;
+    }
+
+    const hasSeenTutorial = window.localStorage.getItem(TUTORIAL_KEY) === '1';
+    setShowMobileTutorial(!hasSeenTutorial);
   }, [loading]);
 
   const closeMobileTutorial = () => {
+    setShowMobileTutorial(false);
+  };
+
+  const dontShowMobileTutorialAgain = () => {
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem('career-mobile-tutorial-seen', '1');
+      window.localStorage.setItem(TUTORIAL_KEY, '1');
     }
     setShowMobileTutorial(false);
   };
@@ -98,16 +114,31 @@ const App: React.FC = () => {
               <h1 className="text-lg md:text-xl font-bold text-gray-800 tracking-tight truncate">Career Path</h1>
               <p className="text-[10px] md:text-[11px] text-gray-400 -mt-0.5 truncate">キャリアパスモデル（育成面談用）</p>
             </div>
+            <div className="md:hidden inline-flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowMobileTutorial(true)}
+              className="inline-flex items-center justify-center rounded-md border border-gray-200 p-2 text-gray-600"
+              aria-label="操作ガイド"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.024 2.6-2.5 2.93-.92.206-1.5.98-1.5 1.93v.14" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 17h.01" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+              </svg>
+            </button>
+
             <button
               type="button"
               onClick={() => setIsMobileFilterOpen(true)}
-              className="md:hidden inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600"
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M6 12h12m-9 8h6" />
               </svg>
               Search/Filter
             </button>
+          </div>
             <div className="hidden md:block text-xs text-gray-400 shrink-0">
               現在の表示:{' '}
               <span className="font-semibold text-gray-600">{TRACK_LABELS[activeTrack]}</span>
@@ -222,6 +253,7 @@ const App: React.FC = () => {
             <MobileGestureTutorial
               open={showMobileTutorial}
               onClose={closeMobileTutorial}
+              onDontShowAgain={dontShowMobileTutorialAgain}
             />
           </div>
         </>

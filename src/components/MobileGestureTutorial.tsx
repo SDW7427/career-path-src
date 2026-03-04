@@ -3,9 +3,10 @@ import React from 'react';
 interface MobileGestureTutorialProps {
   open: boolean;
   onClose: () => void;
+  onDontShowAgain: () => void;
 }
 
-const MobileGestureTutorial: React.FC<MobileGestureTutorialProps> = ({ open, onClose }) => {
+const MobileGestureTutorial: React.FC<MobileGestureTutorialProps> = ({ open, onClose, onDontShowAgain }) => {
   if (!open) return null;
 
   return (
@@ -44,9 +45,17 @@ const MobileGestureTutorial: React.FC<MobileGestureTutorialProps> = ({ open, onC
           <button
             type="button"
             onClick={onClose}
+            className="flex-1 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium py-2"
+          >
+            閉じる
+          </button>
+
+          <button
+            type="button"
+            onClick={onDontShowAgain}
             className="flex-1 rounded-lg bg-gray-800 text-white text-sm font-medium py-2"
           >
-            はじめる
+            今後表示しない
           </button>
         </div>
       </div>
