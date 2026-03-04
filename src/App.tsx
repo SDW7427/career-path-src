@@ -85,6 +85,35 @@ const App: React.FC = () => {
     setShowMobileTutorial(false);
   };
 
+  const handleGraphNodeClick = (nodeId: string) => {
+    handleNodeClick(nodeId);
+    setIsMobileDetailOpen(true);
+  };
+
+  useEffect(() => {
+    if (!selectedNode) {
+      setIsMobileDetailOpen(false);
+    }
+  }, [selectedNode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
+    const hasSeenTutorial = window.localStorage.getItem('career-mobile-tutorial-seen') === '1';
+
+    if (isMobileViewport && !hasSeenTutorial) {
+      setShowMobileTutorial(true);
+    }
+  }, []);
+
+  const closeMobileTutorial = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('career-mobile-tutorial-seen', '1');
+    }
+    setShowMobileTutorial(false);
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       <header className="flex-shrink-0 bg-white border-b border-gray-200 px-3 py-2 md:px-5 md:py-3">
