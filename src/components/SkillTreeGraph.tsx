@@ -123,6 +123,11 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   // IMPORTANT: useState here (not only useRef) so that fitView logic reruns after onInit.
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
 
+  // Hide the graph until the *first* fitView is applied, so users never see the default (0,0,zoom=1)
+  // viewport flash and then a sudden jump. We keep the graph mounted (opacity 0) so measurement works.
+  const [isInitialViewportReady, setIsInitialViewportReady] = useState(false);
+  const hasInitialFitRef = useRef(false);
+
   // Fit once per *visible node set* (track/subtrack changes), not for selection/highlight changes.
   const lastFitSigRef = useRef<string>('');
 
@@ -161,6 +166,11 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
     const inst = rfInstance;
     if (!inst) return;
     if (nodes.length === 0) return;
+
+    // Only for the very first paint: keep hidden until we actually applied fitView.
+    if (!hasInitialFitRef.current) {
+      setIsInitialViewportReady(false);
+    }
 
     // If the visible node set didn't change, never refit.
     if (lastFitSigRef.current === fitSignature) return;
@@ -207,6 +217,12 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
       }
 
       lastFitSigRef.current = fitSignature;
+
+      // Mark initial viewport as ready so we can reveal the graph.
+      if (!hasInitialFitRef.current) {
+        hasInitialFitRef.current = true;
+        setIsInitialViewportReady(true);
+      }
     };
 
     const run = () => {
@@ -236,36 +252,68 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
 
   return (
     <div className="w-full h-full relative">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={handleNodeClick}
-        onInit={(inst) => setRfInstance(inst)}
-        nodeTypes={nodeTypes}
-        minZoom={0.3}
-        maxZoom={1.5}
-        colorMode={'light' as ColorMode}
-        proOptions={{ hideAttribution: true }}
-        nodesDraggable={false}
+      {/* Keep the graph mounted for measurement, but hide it until initial fitView completes. */}
+      <div
+        className={`absolute inset-0 transition-opacity duration-150 ${
+          isInitialViewportReady ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{ pointerEvents: isInitialViewportReady ? 'auto' : 'none' }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
-        {showControls && (
-          <Controls showInteractive={false} className="!bg-white !border-gray-200 !shadow-sm" />
-        )}
-        {showMiniMap && (
-          <MiniMap
-            nodeColor={minimapColor}
-            maskColor="rgba(0,0,0,0.08)"
-            className="!bg-white !border-gray-200"
-            pannable
-            zoomable
-          />
-        )}
-        {/* Stage lane labels overlay */}
-        <StageLaneOverlay track={track} />
-      </ReactFlow>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={handleNodeClick}
+          onInit={(inst) => setRfInstance(inst)}
+          nodeTypes={nodeTypes}
+          minZoom={0.3}
+          maxZoom={1.5}
+          colorMode={'light' as ColorMode}
+          proOptions={{ hideAttribution: true }}
+          nodesDraggable={false}
+        >
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
+          {showControls && (
+            <Controls showInteractive={false} className="!bg-white !border-gray-200 !shadow-sm" />
+          )}
+          {showMiniMap && (
+            <MiniMap
+              nodeColor={minimapColor}
+              maskColor="rgba(0,0,0,0.08)"
+              className="!bg-white !border-gray-200"
+              pannable
+              zoomable
+            />
+          )}
+          {/* Stage lane labels overlay */}
+          <StageLaneOverlay track={track} />
+        </ReactFlow>
+      </div>
+
+      {/* Skeleton overlay during the tiny window before the first fitView */}
+      {!isInitialViewportReady && (
+        <div className="absolute inset-0 bg-white pointer-events-none">
+          <div className="absolute inset-0 animate-pulse">
+            {/* faint canvas blocks to suggest the graph */}
+            <div className="absolute left-8 top-8 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-56 top-8 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-8 top-24 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-56 top-24 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-8 top-40 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-56 top-40 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-8 top-56 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-56 top-56 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-8 top-72 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-56 top-72 h-10 w-40 rounded bg-gray-100" />
+
+            {/* minimap placeholder (desktop only) */}
+            {showMiniMap && (
+              <div className="absolute bottom-8 right-8 h-40 w-56 rounded bg-gray-100" />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Legend note */}
       <div className="absolute bottom-2 left-2 text-[10px] text-gray-400 bg-white/80 px-2 py-1 rounded">
