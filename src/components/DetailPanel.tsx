@@ -1,7 +1,5 @@
 import React from 'react';
-import type {
-  CareerNode,
-} from '../types/career';
+import type { CareerNode } from '../types/career';
 import {
   TRACK_LABELS,
   STAGE_LABELS,
@@ -21,7 +19,7 @@ interface ParsedGroup {
 }
 
 interface ParsedSection {
-  title: string;
+  title: string;   // can be empty for fallback section
   items: string[];
   groups: ParsedGroup[];
 }
@@ -30,8 +28,8 @@ interface ParsedStructuredText {
   sections: ParsedSection[];
 }
 
-const SECTION_MARKER_RE = /^[【〖](.+)[】〗]$/;
-const SUBHEADER_RE = /^[A-Z]\.\s+/;
+const SECTION_MARKER_RE = /^[【〖](.+)[】〗]$/;  // 【】 or 〖〗
+const SUBHEADER_RE = /^[A-Z]\.\s+/;             // A. / B. / ...
 const BULLET_PREFIX_RE = /^[\s・●•▪◦◉◆◇※*\-－ー]+/;
 
 /** Section wrapper for consistency */
@@ -70,18 +68,41 @@ const BulletList: React.FC<{ items: string[] }> = ({ items }) => {
 
 /** Use tags for short lists, bullets for long / sentence-like lists */
 const SmartList: React.FC<{ items: string[]; tagColor?: string }> = ({ items, tagColor }) => {
-  const shouldUseBullets =
-    items.length > 12 || items.some((x) => (x ?? '').length >= 26);
-
-  return shouldUseBullets ? (
-    <BulletList items={items} />
-  ) : (
-    <TagList items={items} color={tagColor} />
-  );
+  const shouldUseBullets = items.length > 12 || items.some((x) => (x ?? '').length >= 26);
+  return shouldUseBullets ? <BulletList items={items} /> : <TagList items={items} color={tagColor} />;
 };
 
-function parseStructuredText(text: string): ParsedStructuredText | null {
-  const lines = text
+function normalizeLine(line: string): string {
+  const normalized = line.replace(BULLET_PREFIX_RE, '').trim();
+  return normalized;
+}
+
+function preprocessText(text: string, stripLeadingHeading?: string): string {
+  const rawLines = (text ?? '')
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((l) => l.trim());
+
+  // remove leading empty lines
+  while (rawLines.length && !rawLines[0]) rawLines.shift();
+
+  if (stripLeadingHeading && rawLines.length) {
+    if (rawLines[0] === stripLeadingHeading) {
+      rawLines.shift();
+      while (rawLines.length && !rawLines[0]) rawLines.shift();
+    }
+  }
+
+  return rawLines.join('\n');
+}
+
+function parseStructuredText(
+  text: string,
+  options?: { stripLeadingHeading?: string }
+): ParsedStructuredText | null {
+  const preprocessed = preprocessText(text, options?.stripLeadingHeading);
+
+  const lines = preprocessed
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
@@ -95,7 +116,8 @@ function parseStructuredText(text: string): ParsedStructuredText | null {
 
   const ensureSection = (): ParsedSection => {
     if (currentSection) return currentSection;
-    const fallbackSection: ParsedSection = { title: 'その他', items: [], groups: [] };
+    // fallback section title is empty to avoid showing "その他" header
+    const fallbackSection: ParsedSection = { title: '', items: [], groups: [] };
     sections.push(fallbackSection);
     currentSection = fallbackSection;
     return fallbackSection;
@@ -128,7 +150,7 @@ function parseStructuredText(text: string): ParsedStructuredText | null {
       continue;
     }
 
-    const normalized = line.replace(BULLET_PREFIX_RE, '').trim();
+    const normalized = normalizeLine(line);
     if (!normalized) continue;
 
     if (currentGroup) {
@@ -148,7 +170,10 @@ function shouldUseChipList(items: string[]): boolean {
   return items.every((item) => item.length <= 18 && !item.includes('。'));
 }
 
-const StructuredContent: React.FC<{ parsed: ParsedStructuredText; chipColor?: string }> = ({ parsed, chipColor }) => {
+const StructuredContent: React.FC<{
+  parsed: ParsedStructuredText;
+  chipColor?: string;
+}> = ({ parsed, chipColor }) => {
   const renderItems = (items: string[]) => {
     if (shouldUseChipList(items)) {
       return <TagList items={items} color={chipColor} />;
@@ -159,8 +184,10 @@ const StructuredContent: React.FC<{ parsed: ParsedStructuredText; chipColor?: st
   return (
     <div className="space-y-3">
       {parsed.sections.map((section, sectionIndex) => (
-        <div key={`${section.title}-${sectionIndex}`} className="space-y-2">
-          <h5 className="text-[11px] font-bold text-gray-500">{section.title}</h5>
+        <div key={`${section.title || 'section'}-${sectionIndex}`} className="space-y-2">
+          {section.title && (
+            <h5 className="text-[11px] font-bold text-gray-500">{section.title}</h5>
+          )}
 
           {section.items.length > 0 && renderItems(section.items)}
 
@@ -199,28 +226,32 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
     );
   }
 
-  const summaryStructured = parseStructuredText(node.summary);
-  const requiredSkillsStructured = parseStructuredText(node.requiredSkills.join('\n'));
-  const requiredExperienceStructured = parseStructuredText(node.requiredExperience.join('\n'));
-  const recommendedCertsStructured = parseStructuredText(node.recommendedCerts.join('\n'));
+  // ✅ IMPORTANT: remove redundant first line like "概要" / "必要スキル" etc.
+  const summaryStructured = parseStructuredText(node.summary, { stripLeadingHeading: '概要' });
+  const requiredSkillsStructured = parseStructuredText(node.requiredSkills.join('\n'), { stripLeadingHeading: '必要スキル' });
+  const requiredExperienceStructured = parseStructuredText(node.requiredExperience.join('\n'), { stripLeadingHeading: '必要経験' });
+  const recommendedCertsStructured = parseStructuredText(node.recommendedCerts.join('\n'), { stripLeadingHeading: '推奨資格' });
 
-  const trackColorClass = {
-    development: 'bg-blue-500',
-    infrastructure: 'bg-cyan-500',
-    'it-support': 'bg-violet-500',
-  }[node.track];
+  const trackColorClass =
+    {
+      development: 'bg-blue-500',
+      infrastructure: 'bg-cyan-500',
+      'it-support': 'bg-violet-500',
+    }[node.track];
 
-  const trackBadgeClass = {
-    development: 'bg-blue-100 text-blue-700',
-    infrastructure: 'bg-cyan-100 text-cyan-700',
-    'it-support': 'bg-violet-100 text-violet-700',
-  }[node.track];
+  const trackBadgeClass =
+    {
+      development: 'bg-blue-100 text-blue-700',
+      infrastructure: 'bg-cyan-100 text-cyan-700',
+      'it-support': 'bg-violet-100 text-violet-700',
+    }[node.track];
 
-  const pathBadgeClass = {
-    specialist: 'bg-sky-100 text-sky-700',
-    manager: 'bg-amber-100 text-amber-700',
-    common: 'bg-gray-100 text-gray-600',
-  }[node.pathType];
+  const pathBadgeClass =
+    {
+      specialist: 'bg-sky-100 text-sky-700',
+      manager: 'bg-amber-100 text-amber-700',
+      common: 'bg-gray-100 text-gray-600',
+    }[node.pathType];
 
   // Resolve related nodes for clickable links
   const relatedNodes = (node.relatedNodeIds || [])
