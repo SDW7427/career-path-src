@@ -19,7 +19,7 @@ interface ParsedGroup {
 }
 
 interface ParsedSection {
-  title: string;   // can be empty for fallback section
+  title: string; // can be empty for fallback section
   items: string[];
   groups: ParsedGroup[];
 }
@@ -41,12 +41,24 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 );
 
 /** Render a list of strings as compact tags/pills */
-const TagList: React.FC<{ items: string[]; color?: string }> = ({ items, color = 'bg-gray-100 text-gray-700' }) => {
+const TagList: React.FC<{ items: string[]; color?: string; wrapLong?: boolean }> = ({
+  items,
+  color = 'bg-gray-100 text-gray-700',
+  wrapLong = false,
+}) => {
   if (!items.length) return <span className="text-xs text-gray-300">-</span>;
+
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-1 min-w-0">
       {items.map((item, i) => (
-        <span key={i} className={`inline-block text-xs px-2 py-0.5 rounded-md ${color}`}>
+        <span
+          key={i}
+          className={[
+            'inline-block text-xs px-2 py-0.5 rounded-md',
+            color,
+            wrapLong ? 'whitespace-normal break-words max-w-full leading-snug' : '',
+          ].join(' ')}
+        >
           {item}
         </span>
       ))}
@@ -122,7 +134,7 @@ function parseStructuredText(
   };
 
   for (const rawLine of lines) {
-    // ✅ headerCandidate strips bullet prefix so "・A. フロントエンド" also works
+    // headerCandidate strips bullet prefix so "・A. フロントエンド" also works
     const headerCandidate = normalizeLine(rawLine);
 
     const markerMatch = headerCandidate.match(SECTION_MARKER_RE);
@@ -177,29 +189,44 @@ function isChipItem(item: string): boolean {
 const MixedList: React.FC<{ items: string[]; chipColor?: string }> = ({ items, chipColor }) => {
   if (!items.length) return <span className="text-xs text-gray-300">-</span>;
 
-  const chipItems = items.filter(isChipItem);
-  const bulletItems = items.filter((x) => !isChipItem(x));
+  // order-preserving rendering: keep original item order, but render chips and bullets in runs
+  const blocks: React.ReactNode[] = [];
+  let chipBuf: string[] = [];
+  let bulletBuf: string[] = [];
 
-  // Only chips
-  if (chipItems.length && !bulletItems.length) {
-    // keep chip count sanity: if too many, bullets are better
-    if (chipItems.length > 16) return <BulletList items={items} />;
-    return <TagList items={chipItems} color={chipColor} />;
+  const flushChips = () => {
+    if (!chipBuf.length) return;
+    if (chipBuf.length > 16) {
+      blocks.push(<BulletList key={`b-from-chips-${blocks.length}`} items={chipBuf} />);
+    } else {
+      blocks.push(<TagList key={`chips-${blocks.length}`} items={chipBuf} color={chipColor} />);
+    }
+    chipBuf = [];
+  };
+
+  const flushBullets = () => {
+    if (!bulletBuf.length) return;
+    blocks.push(<BulletList key={`bullets-${blocks.length}`} items={bulletBuf} />);
+    bulletBuf = [];
+  };
+
+  for (const it of items) {
+    if (isChipItem(it)) {
+      flushBullets();
+      chipBuf.push(it);
+    } else {
+      flushChips();
+      bulletBuf.push(it);
+    }
   }
 
-  // Only bullets
-  if (!chipItems.length && bulletItems.length) {
-    return <BulletList items={bulletItems} />;
-  }
+  flushChips();
+  flushBullets();
 
-  // Mixed: chips first, then bullets
-  return (
-    <div className="space-y-2">
-      {chipItems.length > 0 && <TagList items={chipItems} color={chipColor} />}
-      {bulletItems.length > 0 && <BulletList items={bulletItems} />}
-    </div>
-  );
+  return <div className="space-y-2">{blocks}</div>;
 };
+
+const FORCE_CHIP_SECTIONS = new Set(['対応ドメイン例']);
 
 const StructuredContent: React.FC<{
   parsed: ParsedStructuredText;
@@ -207,33 +234,45 @@ const StructuredContent: React.FC<{
 }> = ({ parsed, chipColor }) => {
   return (
     <div className="space-y-3">
-      {parsed.sections.map((section, sectionIndex) => (
-        <div key={`${section.title || 'section'}-${sectionIndex}`} className="space-y-2">
-          {section.title && (
-            <h5 className="text-[11px] font-bold text-gray-600 flex items-center gap-2">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-300" />
-              {section.title}
-            </h5>
-          )}
+      {parsed.sections.map((section, sectionIndex) => {
+        const forceChips = FORCE_CHIP_SECTIONS.has(section.title);
 
-          {section.items.length > 0 && (
-            <MixedList items={section.items} chipColor={chipColor} />
-          )}
+        return (
+          <div key={`${section.title || 'section'}-${sectionIndex}`} className="space-y-2">
+            {section.title && (
+              <h5 className="text-[11px] font-bold text-gray-600 flex items-center gap-2">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-300" />
+                {section.title}
+              </h5>
+            )}
 
-          {section.groups.map((group, groupIndex) => (
-            <div key={`${group.title}-${groupIndex}`} className="space-y-1.5">
-              {/* ✅ group header visibility upgrade */}
-              <div className="inline-flex items-center gap-2 text-[11px] font-semibold text-gray-600 bg-gray-50 border border-gray-100 rounded px-2 py-1">
-                {group.title}
+            {section.items.length > 0 && (
+              forceChips ? (
+                <TagList items={section.items} color={chipColor} wrapLong />
+              ) : (
+                <MixedList items={section.items} chipColor={chipColor} />
+              )
+            )}
+
+            {section.groups.map((group, groupIndex) => (
+              <div key={`${group.title}-${groupIndex}`} className="space-y-1.5">
+                {/* group header visibility upgrade */}
+                <div className="inline-flex items-center gap-2 text-[11px] font-semibold text-gray-600 bg-gray-50 border border-gray-100 rounded px-2 py-1">
+                  {group.title}
+                </div>
+
+                <div className="pl-1">
+                  {forceChips ? (
+                    <TagList items={group.items} color={chipColor} wrapLong />
+                  ) : (
+                    <MixedList items={group.items} chipColor={chipColor} />
+                  )}
+                </div>
               </div>
-
-              <div className="pl-1">
-                <MixedList items={group.items} chipColor={chipColor} />
-              </div>
-            </div>
-          ))}
-        </div>
-      ))}
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 };
