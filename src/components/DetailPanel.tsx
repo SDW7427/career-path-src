@@ -28,8 +28,8 @@ interface ParsedStructuredText {
   sections: ParsedSection[];
 }
 
-const SECTION_MARKER_RE = /^[【〖](.+)[】〗]$/;  // 【】 or 〖〗
-const SUBHEADER_RE = /^[A-Z]\.\s+/;             // A. / B. / ...
+const SECTION_MARKER_RE = /^[【〖](.+)[】〗]$/; // 【...】 or 〖...〗
+const SUBHEADER_RE = /^[A-Z]\.\s+/;            // A. / B. / C. ...
 const BULLET_PREFIX_RE = /^[\s・●•▪◦◉◆◇※*\-－ー]+/;
 
 /** Section wrapper for consistency */
@@ -73,8 +73,7 @@ const SmartList: React.FC<{ items: string[]; tagColor?: string }> = ({ items, ta
 };
 
 function normalizeLine(line: string): string {
-  const normalized = line.replace(BULLET_PREFIX_RE, '').trim();
-  return normalized;
+  return line.replace(BULLET_PREFIX_RE, '').trim();
 }
 
 function preprocessText(text: string, stripLeadingHeading?: string): string {
@@ -83,7 +82,6 @@ function preprocessText(text: string, stripLeadingHeading?: string): string {
     .split('\n')
     .map((l) => l.trim());
 
-  // remove leading empty lines
   while (rawLines.length && !rawLines[0]) rawLines.shift();
 
   if (stripLeadingHeading && rawLines.length) {
@@ -116,15 +114,18 @@ function parseStructuredText(
 
   const ensureSection = (): ParsedSection => {
     if (currentSection) return currentSection;
-    // fallback section title is empty to avoid showing "その他" header
+    // fallback section title is empty to avoid showing "その他"
     const fallbackSection: ParsedSection = { title: '', items: [], groups: [] };
     sections.push(fallbackSection);
     currentSection = fallbackSection;
     return fallbackSection;
   };
 
-  for (const line of lines) {
-    const markerMatch = line.match(SECTION_MARKER_RE);
+  for (const rawLine of lines) {
+    // ✅ headerCandidate strips bullet prefix so "・A. フロントエンド" also works
+    const headerCandidate = normalizeLine(rawLine);
+
+    const markerMatch = headerCandidate.match(SECTION_MARKER_RE);
     if (markerMatch) {
       hasMarkerOrSubheader = true;
       const section: ParsedSection = {
@@ -138,11 +139,11 @@ function parseStructuredText(
       continue;
     }
 
-    if (SUBHEADER_RE.test(line)) {
+    if (SUBHEADER_RE.test(headerCandidate)) {
       hasMarkerOrSubheader = true;
       const section = ensureSection();
       const group: ParsedGroup = {
-        title: line,
+        title: headerCandidate,
         items: [],
       };
       section.groups.push(group);
@@ -150,13 +151,12 @@ function parseStructuredText(
       continue;
     }
 
-    const normalized = normalizeLine(line);
-    if (!normalized) continue;
+    if (!headerCandidate) continue;
 
     if (currentGroup) {
-      currentGroup.items.push(normalized);
+      currentGroup.items.push(headerCandidate);
     } else {
-      ensureSection().items.push(normalized);
+      ensureSection().items.push(headerCandidate);
     }
   }
 
@@ -164,37 +164,72 @@ function parseStructuredText(
   return { sections };
 }
 
-function shouldUseChipList(items: string[]): boolean {
-  if (!items.length) return false;
-  if (items.length > 12) return false;
-  return items.every((item) => item.length <= 18 && !item.includes('。'));
+/** chip candidate rules */
+function isChipItem(item: string): boolean {
+  // short & non-sentence-ish => chip
+  if (!item) return false;
+  if (item.length > 18) return false;
+  if (item.includes('。')) return false;
+  return true;
 }
+
+/** Render mixed chips + bullets in one block (readability upgrade) */
+const MixedList: React.FC<{ items: string[]; chipColor?: string }> = ({ items, chipColor }) => {
+  if (!items.length) return <span className="text-xs text-gray-300">-</span>;
+
+  const chipItems = items.filter(isChipItem);
+  const bulletItems = items.filter((x) => !isChipItem(x));
+
+  // Only chips
+  if (chipItems.length && !bulletItems.length) {
+    // keep chip count sanity: if too many, bullets are better
+    if (chipItems.length > 16) return <BulletList items={items} />;
+    return <TagList items={chipItems} color={chipColor} />;
+  }
+
+  // Only bullets
+  if (!chipItems.length && bulletItems.length) {
+    return <BulletList items={bulletItems} />;
+  }
+
+  // Mixed: chips first, then bullets
+  return (
+    <div className="space-y-2">
+      {chipItems.length > 0 && <TagList items={chipItems} color={chipColor} />}
+      {bulletItems.length > 0 && <BulletList items={bulletItems} />}
+    </div>
+  );
+};
 
 const StructuredContent: React.FC<{
   parsed: ParsedStructuredText;
   chipColor?: string;
 }> = ({ parsed, chipColor }) => {
-  const renderItems = (items: string[]) => {
-    if (shouldUseChipList(items)) {
-      return <TagList items={items} color={chipColor} />;
-    }
-    return <BulletList items={items} />;
-  };
-
   return (
     <div className="space-y-3">
       {parsed.sections.map((section, sectionIndex) => (
         <div key={`${section.title || 'section'}-${sectionIndex}`} className="space-y-2">
           {section.title && (
-            <h5 className="text-[11px] font-bold text-gray-500">{section.title}</h5>
+            <h5 className="text-[11px] font-bold text-gray-600 flex items-center gap-2">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-300" />
+              {section.title}
+            </h5>
           )}
 
-          {section.items.length > 0 && renderItems(section.items)}
+          {section.items.length > 0 && (
+            <MixedList items={section.items} chipColor={chipColor} />
+          )}
 
           {section.groups.map((group, groupIndex) => (
             <div key={`${group.title}-${groupIndex}`} className="space-y-1.5">
-              <h6 className="text-[11px] font-semibold text-gray-500">{group.title}</h6>
-              {renderItems(group.items)}
+              {/* ✅ group header visibility upgrade */}
+              <div className="inline-flex items-center gap-2 text-[11px] font-semibold text-gray-600 bg-gray-50 border border-gray-100 rounded px-2 py-1">
+                {group.title}
+              </div>
+
+              <div className="pl-1">
+                <MixedList items={group.items} chipColor={chipColor} />
+              </div>
             </div>
           ))}
         </div>
@@ -226,7 +261,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
     );
   }
 
-  // ✅ IMPORTANT: remove redundant first line like "概要" / "必要スキル" etc.
+  // remove redundant first line like "概要" / "必要スキル" etc.
   const summaryStructured = parseStructuredText(node.summary, { stripLeadingHeading: '概要' });
   const requiredSkillsStructured = parseStructuredText(node.requiredSkills.join('\n'), { stripLeadingHeading: '必要スキル' });
   const requiredExperienceStructured = parseStructuredText(node.requiredExperience.join('\n'), { stripLeadingHeading: '必要経験' });
