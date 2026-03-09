@@ -30,7 +30,8 @@ interface ParsedStructuredText {
 
 const SECTION_MARKER_RE = /^[【〖](.+)[】〗]$/; // 【...】 or 〖...〗
 const SUBHEADER_RE = /^[A-Z]\.\s+/;            // A. / B. / C. ...
-const BULLET_PREFIX_RE = /^[\s・●•▪◦◉◆◇※*\-－ー]+/;
+// NOTE: "※" は消さない（原文表示したい）ので prefix から除外
+const BULLET_PREFIX_RE = /^[\s・●•▪◦◉◆◇*\-－ー]+/;
 
 /** Section wrapper for consistency */
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
@@ -78,13 +79,8 @@ const BulletList: React.FC<{ items: string[] }> = ({ items }) => {
   );
 };
 
-/** Use tags for short lists, bullets for long / sentence-like lists */
-const SmartList: React.FC<{ items: string[]; tagColor?: string }> = ({ items, tagColor }) => {
-  const shouldUseBullets = items.length > 12 || items.some((x) => (x ?? '').length >= 26);
-  return shouldUseBullets ? <BulletList items={items} /> : <TagList items={items} color={tagColor} />;
-};
-
 function normalizeLine(line: string): string {
+  // "※" は prefix で消さない（BULLET_PREFIX_REに含めない）
   return line.replace(BULLET_PREFIX_RE, '').trim();
 }
 
@@ -134,10 +130,10 @@ function parseStructuredText(
   };
 
   for (const rawLine of lines) {
-    // headerCandidate strips bullet prefix so "・A. フロントエンド" also works
-    const headerCandidate = normalizeLine(rawLine);
+    // strip common bullets so "・A. ..." also works
+    const candidate = normalizeLine(rawLine);
 
-    const markerMatch = headerCandidate.match(SECTION_MARKER_RE);
+    const markerMatch = candidate.match(SECTION_MARKER_RE);
     if (markerMatch) {
       hasMarkerOrSubheader = true;
       const section: ParsedSection = {
@@ -151,11 +147,11 @@ function parseStructuredText(
       continue;
     }
 
-    if (SUBHEADER_RE.test(headerCandidate)) {
+    if (SUBHEADER_RE.test(candidate)) {
       hasMarkerOrSubheader = true;
       const section = ensureSection();
       const group: ParsedGroup = {
-        title: headerCandidate,
+        title: candidate,
         items: [],
       };
       section.groups.push(group);
@@ -163,12 +159,12 @@ function parseStructuredText(
       continue;
     }
 
-    if (!headerCandidate) continue;
+    if (!candidate) continue;
 
     if (currentGroup) {
-      currentGroup.items.push(headerCandidate);
+      currentGroup.items.push(candidate);
     } else {
-      ensureSection().items.push(headerCandidate);
+      ensureSection().items.push(candidate);
     }
   }
 
@@ -176,57 +172,13 @@ function parseStructuredText(
   return { sections };
 }
 
-/** chip candidate rules */
-function isChipItem(item: string): boolean {
-  // short & non-sentence-ish => chip
-  if (!item) return false;
-  if (item.length > 18) return false;
-  if (item.includes('。')) return false;
-  return true;
-}
-
-/** Render mixed chips + bullets in one block (readability upgrade) */
-const MixedList: React.FC<{ items: string[]; chipColor?: string }> = ({ items, chipColor }) => {
-  if (!items.length) return <span className="text-xs text-gray-300">-</span>;
-
-  // order-preserving rendering: keep original item order, but render chips and bullets in runs
-  const blocks: React.ReactNode[] = [];
-  let chipBuf: string[] = [];
-  let bulletBuf: string[] = [];
-
-  const flushChips = () => {
-    if (!chipBuf.length) return;
-    if (chipBuf.length > 16) {
-      blocks.push(<BulletList key={`b-from-chips-${blocks.length}`} items={chipBuf} />);
-    } else {
-      blocks.push(<TagList key={`chips-${blocks.length}`} items={chipBuf} color={chipColor} />);
-    }
-    chipBuf = [];
-  };
-
-  const flushBullets = () => {
-    if (!bulletBuf.length) return;
-    blocks.push(<BulletList key={`bullets-${blocks.length}`} items={bulletBuf} />);
-    bulletBuf = [];
-  };
-
-  for (const it of items) {
-    if (isChipItem(it)) {
-      flushBullets();
-      chipBuf.push(it);
-    } else {
-      flushChips();
-      bulletBuf.push(it);
-    }
-  }
-
-  flushChips();
-  flushBullets();
-
-  return <div className="space-y-2">{blocks}</div>;
-};
-
+// ✅ 対応ドメイン例：用語は全部チップ、ただし「※」行は注記として原文表示
 const FORCE_CHIP_SECTIONS = new Set(['対応ドメイン例']);
+function splitDomainItems(items: string[]) {
+  const notes = items.filter((x) => x.startsWith('※'));
+  const chips = items.filter((x) => !x.startsWith('※'));
+  return { chips, notes };
+}
 
 const StructuredContent: React.FC<{
   parsed: ParsedStructuredText;
@@ -237,6 +189,32 @@ const StructuredContent: React.FC<{
       {parsed.sections.map((section, sectionIndex) => {
         const forceChips = FORCE_CHIP_SECTIONS.has(section.title);
 
+        const renderItems = (items: string[]) => {
+          if (!items.length) return <span className="text-xs text-gray-300">-</span>;
+
+          if (forceChips) {
+            const { chips, notes } = splitDomainItems(items);
+            return (
+              <div className="space-y-2">
+                {chips.length > 0 && (
+                  <TagList items={chips} color={chipColor} wrapLong />
+                )}
+                {notes.map((n, i) => (
+                  <p
+                    key={i}
+                    className="text-xs text-gray-500 leading-relaxed whitespace-pre-line"
+                  >
+                    {n}
+                  </p>
+                ))}
+              </div>
+            );
+          }
+
+          // ✅ ここは「長さでチップ/箇条書き切替」しない。常に箇条書き。
+          return <BulletList items={items} />;
+        };
+
         return (
           <div key={`${section.title || 'section'}-${sectionIndex}`} className="space-y-2">
             {section.title && (
@@ -246,27 +224,16 @@ const StructuredContent: React.FC<{
               </h5>
             )}
 
-            {section.items.length > 0 && (
-              forceChips ? (
-                <TagList items={section.items} color={chipColor} wrapLong />
-              ) : (
-                <MixedList items={section.items} chipColor={chipColor} />
-              )
-            )}
+            {section.items.length > 0 && renderItems(section.items)}
 
             {section.groups.map((group, groupIndex) => (
               <div key={`${group.title}-${groupIndex}`} className="space-y-1.5">
-                {/* group header visibility upgrade */}
                 <div className="inline-flex items-center gap-2 text-[11px] font-semibold text-gray-600 bg-gray-50 border border-gray-100 rounded px-2 py-1">
                   {group.title}
                 </div>
 
                 <div className="pl-1">
-                  {forceChips ? (
-                    <TagList items={group.items} color={chipColor} wrapLong />
-                  ) : (
-                    <MixedList items={group.items} chipColor={chipColor} />
-                  )}
+                  {renderItems(group.items)}
                 </div>
               </div>
             ))}
@@ -302,9 +269,9 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
 
   // remove redundant first line like "概要" / "必要スキル" etc.
   const summaryStructured = parseStructuredText(node.summary, { stripLeadingHeading: '概要' });
-  const requiredSkillsStructured = parseStructuredText(node.requiredSkills.join('\n'), { stripLeadingHeading: '必要スキル' });
-  const requiredExperienceStructured = parseStructuredText(node.requiredExperience.join('\n'), { stripLeadingHeading: '必要経験' });
-  const recommendedCertsStructured = parseStructuredText(node.recommendedCerts.join('\n'), { stripLeadingHeading: '推奨資格' });
+  const skillsStructured = parseStructuredText(node.requiredSkills.join('\n'), { stripLeadingHeading: '必要スキル' });
+  const experienceStructured = parseStructuredText(node.requiredExperience.join('\n'), { stripLeadingHeading: '必要経験' });
+  const certsStructured = parseStructuredText(node.recommendedCerts.join('\n'), { stripLeadingHeading: '推奨資格' });
 
   const trackColorClass =
     {
@@ -373,36 +340,39 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
         )}
       </Section>
 
-      {/* Required Skills */}
-      <Section title="必要スキル">
-        {requiredSkillsStructured ? (
-          <StructuredContent parsed={requiredSkillsStructured} chipColor="bg-blue-50 text-blue-700" />
+      {/* Skills (必要スキル -> スキル) */}
+      <Section title="スキル">
+        {skillsStructured ? (
+          <StructuredContent parsed={skillsStructured} chipColor="bg-blue-50 text-blue-700" />
         ) : (
-          <SmartList items={node.requiredSkills} tagColor="bg-blue-50 text-blue-700" />
+          // ✅ 自動切替しない：スキルはチップで統一（長文は wrapLong で折り返し）
+          <TagList items={node.requiredSkills} color="bg-blue-50 text-blue-700" wrapLong />
         )}
       </Section>
 
-      {/* Required Experience */}
-      <Section title="必要経験">
-        {requiredExperienceStructured ? (
-          <StructuredContent parsed={requiredExperienceStructured} />
+      {/* Experience (必要経験 -> 経験) */}
+      <Section title="経験">
+        {experienceStructured ? (
+          <StructuredContent parsed={experienceStructured} />
         ) : (
           <BulletList items={node.requiredExperience} />
         )}
       </Section>
 
-      {/* Recommended Certifications */}
-      <Section title="推奨資格">
-        {recommendedCertsStructured ? (
-          <StructuredContent parsed={recommendedCertsStructured} chipColor="bg-green-50 text-green-700" />
+      {/* Certifications (推奨資格 -> 資格) */}
+      <Section title="資格">
+        {certsStructured ? (
+          <StructuredContent parsed={certsStructured} chipColor="bg-green-50 text-green-700" />
         ) : (
-          <SmartList items={node.recommendedCerts} tagColor="bg-green-50 text-green-700" />
+          // ✅ 自動切替しない：資格はチップで統一（長文は wrapLong で折り返し）
+          <TagList items={node.recommendedCerts} color="bg-green-50 text-green-700" wrapLong />
         )}
       </Section>
 
       {/* Tools / Environments / Languages */}
       <Section title="ツール・環境・言語">
-        <SmartList items={node.toolsEnvironmentsLanguages} tagColor="bg-gray-50 text-gray-600" />
+        {/* ✅ 自動切替しない：ツールはチップで統一 */}
+        <TagList items={node.toolsEnvironmentsLanguages} color="bg-gray-50 text-gray-600" />
       </Section>
 
       {/* Next Step Conditions */}
