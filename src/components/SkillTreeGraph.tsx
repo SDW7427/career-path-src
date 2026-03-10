@@ -25,8 +25,6 @@ interface SkillTreeGraphProps {
   connectedNodeIds: Set<string>;
   track: Track;
   onNodeClick: (nodeId: string) => void;
-
-  // ✅ App.tsx에서 넘기는 props를 수용
   showMiniMap?: boolean;
   showControls?: boolean;
 }
@@ -50,10 +48,7 @@ const STAGE_Y_BASE = 50;
 const STAGE_Y_GAP = 150;
 const MAX_STAGE = 6;
 
-/**
- * React Flow position is top-left.
- * Your node CSS has min-width 140px, so half = 70px is a good stable snap target.
- */
+/** Node position is top-left */
 const NODE_HALF_WIDTH = 70;
 
 type LaneMap = Record<string, Partial<Record<PathType, number>> & { center: number }>;
@@ -74,7 +69,28 @@ const TRACK_LANES: Record<Track, LaneMap> = {
   },
 };
 
-function stageToY(stage: number): number {
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+/** ✅ stage가 "段階6" 같은 문자열이어도 안전하게 숫자로 변환 */
+function coerceStage(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return clamp(value, 1, MAX_STAGE);
+
+  if (typeof value === 'string') {
+    // "6", "段階6", "段階 6" etc
+    const m = value.match(/\d+/);
+    if (m) {
+      const n = Number(m[0]);
+      if (Number.isFinite(n)) return clamp(n, 1, MAX_STAGE);
+    }
+  }
+  // fallback
+  return 1;
+}
+
+function stageToY(stageValue: unknown): number {
+  const stage = coerceStage(stageValue);
   return STAGE_Y_BASE + (MAX_STAGE - stage) * STAGE_Y_GAP;
 }
 
@@ -90,17 +106,17 @@ function inferSubtrack(track: Track, x: number): string {
 }
 
 function snapNodePosition(node: CareerNodeType): { x: number; y: number } {
-  const y = stageToY(node.stage);
+  const y = stageToY((node as any).stage);
 
   const laneMap = TRACK_LANES[node.track];
-  const rawX = node.position?.x ?? 0;
+  const rawX = (node.position as any)?.x ?? 0;
 
   const sub =
     node.subtrack && laneMap[node.subtrack]
       ? node.subtrack
       : inferSubtrack(node.track, rawX);
 
-  const lane = laneMap[sub] ?? undefined;
+  const lane = laneMap[sub];
 
   const centerX =
     (lane && lane[node.pathType as PathType]) ??
@@ -124,10 +140,21 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   showMiniMap = true,
   showControls = true,
 }) => {
+  // ✅ robust default (in case parent briefly passes undefined)
+  const safeNodes = careerNodes ?? [];
+  const safeEdges = careerEdges ?? [];
+
+  /** Precompute snapped positions for consistent edge handle decisions */
+  const snappedPosById = useMemo(() => {
+    const m = new Map<string, { x: number; y: number }>();
+    for (const cn of safeNodes) m.set(cn.id, snapNodePosition(cn));
+    return m;
+  }, [safeNodes]);
+
   /** Snap all nodes onto fixed lanes + stage rows so edges become straight */
   const rfNodes: Node[] = useMemo(() => {
-    return careerNodes.map((cn) => {
-      const snapped = snapNodePosition(cn);
+    return safeNodes.map((cn) => {
+      const snapped = snappedPosById.get(cn.id) ?? snapNodePosition(cn);
 
       return {
         id: cn.id,
@@ -147,25 +174,29 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         } satisfies CareerNodeData,
       };
     });
-  }, [careerNodes, selectedNodeId, connectedNodeIds]);
+  }, [safeNodes, snappedPosById, selectedNodeId, connectedNodeIds]);
 
   /** Convert CareerEdge[] → React Flow Edge[] */
   const rfEdges: Edge[] = useMemo(() => {
-    const nodeMeta = new Map(careerNodes.map((node) => [node.id, node]));
+    const nodeMeta = new Map(safeNodes.map((node) => [node.id, node]));
 
-    return careerEdges.map((ce, idx) => {
+    return safeEdges.map((ce, idx) => {
       const sourceNode = nodeMeta.get(ce.source);
       const targetNode = nodeMeta.get(ce.target);
 
+      const sourcePos = snappedPosById.get(ce.source);
+      const targetPos = snappedPosById.get(ce.target);
+
+      const sourceStage = sourceNode ? coerceStage((sourceNode as any).stage) : NaN;
+      const targetStage = targetNode ? coerceStage((targetNode as any).stage) : NaN;
+
       const isSameStage =
-        sourceNode !== undefined &&
-        targetNode !== undefined &&
-        sourceNode.stage === targetNode.stage;
+        Number.isFinite(sourceStage) &&
+        Number.isFinite(targetStage) &&
+        sourceStage === targetStage;
 
       const sourceIsLeft =
-        sourceNode !== undefined && targetNode !== undefined
-          ? (sourceNode.position?.x ?? 0) <= (targetNode.position?.x ?? 0)
-          : true;
+        sourcePos && targetPos ? sourcePos.x <= targetPos.x : true;
 
       return {
         id: `e-${ce.source}-${ce.target}-${idx}`,
@@ -196,12 +227,12 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         type: 'straight',
       };
     });
-  }, [careerEdges, careerNodes]);
+  }, [safeEdges, safeNodes, snappedPosById]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges);
 
-  /** Sync when source data changes (track switch, selection change) */
+  /** Sync when source data changes */
   useEffect(() => {
     setNodes(rfNodes);
   }, [rfNodes, setNodes]);
@@ -245,9 +276,7 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
-
         {showControls && <Controls showInteractive={false} />}
-
         {showMiniMap && (
           <MiniMap
             nodeColor={() => minimapColor}
