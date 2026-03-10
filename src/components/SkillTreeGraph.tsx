@@ -57,12 +57,47 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   showMiniMap = true,
   showControls = true,
 }) => {
+  /**
+   * ✅ Edge가 “기울어져 보이는” 주 원인 중 하나가
+   * 노드 폭이 가변(min/max)이라서 handle의 실제 x 위치(중심)가 달라지는 경우임.
+   * 여기서 wrapper style로 폭을 고정해주면 (CSS를 안 건드려도) 정렬이 안정됨.
+   *
+   * - Desktop: 140
+   * - Mobile: 110
+   */
+  const [nodeWidth, setNodeWidth] = useState<number>(() => {
+    if (typeof window === 'undefined') return 140;
+    return window.matchMedia?.('(max-width: 768px)').matches ? 110 : 140;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mql = window.matchMedia('(max-width: 768px)');
+    const update = () => setNodeWidth(mql.matches ? 110 : 140);
+
+    // 초기 1회 반영
+    update();
+
+    // 브라우저별 호환
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', update);
+      return () => mql.removeEventListener('change', update);
+    }
+    // @ts-expect-error older safari
+    mql.addListener(update);
+    // @ts-expect-error older safari
+    return () => mql.removeListener(update);
+  }, []);
+
   // Convert CareerNode[] → React Flow Node[]
   const rfNodes: Node[] = useMemo(() => {
     return careerNodes.map((cn) => ({
       id: cn.id,
       type: 'careerNode',
       position: cn.position,
+      // ✅ wrapper width 고정 (직선/정렬 체감에 가장 큼)
+      style: { width: nodeWidth, minWidth: nodeWidth, maxWidth: nodeWidth },
       data: {
         nodeId: cn.id,
         shortLabel: cn.shortLabel,
@@ -76,7 +111,7 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         isConnected: connectedNodeIds.has(cn.id),
       } satisfies CareerNodeData,
     }));
-  }, [careerNodes, selectedNodeId, connectedNodeIds]);
+  }, [careerNodes, selectedNodeId, connectedNodeIds, nodeWidth]);
 
   // Convert CareerEdge[] → React Flow Edge[]
   const rfEdges: Edge[] = useMemo(() => {
@@ -111,8 +146,13 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
               ? { stroke: '#94a3b8', strokeDasharray: '6 4' }
               : { stroke: '#94a3b8' },
         labelStyle: { fontSize: 10, fill: '#64748b' },
-        // 段階の進行エッジ（例: 段階1→2）は直線で描画したい
-        type: ce.type === 'cross-track' ? 'smoothstep' : 'straight',
+
+        /**
+         * ✅ 일괄 직선 적용
+         * - cross-track도 smoothstep(곡선) 쓰지 않고 straight로 통일
+         * - “삐뚤빼뚤” 체감이 제일 크게 줄어듦
+         */
+        type: 'straight',
       };
     });
   }, [careerEdges, careerNodes]);
@@ -272,6 +312,8 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
           colorMode={'light' as ColorMode}
           proOptions={{ hideAttribution: true }}
           nodesDraggable={false}
+          // ✅ “혹시 어딘가에서 type이 덮어써져도” 직선 유지하는 안전장치
+          defaultEdgeOptions={{ type: 'straight' }}
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
           {showControls && (
