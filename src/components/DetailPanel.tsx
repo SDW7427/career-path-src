@@ -33,11 +33,10 @@ const SUBHEADER_RE = /^[A-Z]\.\s+/;            // A. / B. / C. ...
 // NOTE: "※" は消さない（原文表示したい）ので prefix から除外
 const BULLET_PREFIX_RE = /^[\s・●•▪◦◉◆◇*\-－ー]+/;
 
-/** === Section Header (more visible) === */
 const Section: React.FC<{
   title: string;
   children: React.ReactNode;
-  accentClass?: string; // optional accent color bar
+  accentClass?: string;
 }> = ({ title, children, accentClass = 'bg-gray-300' }) => (
   <div className="mb-5">
     <div className="flex items-center gap-2 mb-2">
@@ -50,7 +49,7 @@ const Section: React.FC<{
   </div>
 );
 
-/** Render a list of strings as compact tags/pills */
+/** TagList */
 const TagList: React.FC<{ items: string[]; color?: string; wrapLong?: boolean }> = ({
   items,
   color = 'bg-gray-100 text-gray-700',
@@ -76,7 +75,7 @@ const TagList: React.FC<{ items: string[]; color?: string; wrapLong?: boolean }>
   );
 };
 
-/** Render a list as bullet points */
+/** Bullet list (for normal sentences) */
 const BulletList: React.FC<{ items: string[] }> = ({ items }) => {
   if (!items.length) return <span className="text-xs text-gray-300">-</span>;
   return (
@@ -88,8 +87,24 @@ const BulletList: React.FC<{ items: string[] }> = ({ items }) => {
   );
 };
 
+/** Subsection list: different visual from bullets (no bullet dots) */
+const SubsectionList: React.FC<{ items: string[] }> = ({ items }) => {
+  if (!items.length) return <span className="text-xs text-gray-300">-</span>;
+  return (
+    <div className="space-y-1.5">
+      {items.map((item, i) => (
+        <div
+          key={i}
+          className="text-xs text-gray-700 leading-relaxed pl-3 border-l-2 border-gray-200 bg-gray-50/50 rounded-sm py-1 pr-2"
+        >
+          {item}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 function normalizeLine(line: string): string {
-  // "※" は prefix で消さない（BULLET_PREFIX_REに含めない）
   return line.replace(BULLET_PREFIX_RE, '').trim();
 }
 
@@ -131,7 +146,6 @@ function parseStructuredText(
 
   const ensureSection = (): ParsedSection => {
     if (currentSection) return currentSection;
-    // fallback section title is empty to avoid showing "その他"
     const fallbackSection: ParsedSection = { title: '', items: [], groups: [] };
     sections.push(fallbackSection);
     currentSection = fallbackSection;
@@ -180,13 +194,22 @@ function parseStructuredText(
   return { sections };
 }
 
-// ✅ 対応ドメイン例：用語は全部チップ、ただし「※」行は注記として原文表示
+// 対応ドメイン例：用語は全部チップ、ただし「※」行は注記として原文表示
 const FORCE_CHIP_SECTIONS = new Set(['対応ドメイン例']);
 function splitDomainItems(items: string[]) {
   const notes = items.filter((x) => x.startsWith('※'));
   const chips = items.filter((x) => !x.startsWith('※'));
   return { chips, notes };
 }
+
+/** Subtitles you want to stand out: render their contents in SubsectionList (not bullets) */
+const EMPHASIZE_SUBTITLE = new Set([
+  '役割',
+  '共通業務',
+  '分野別業務',
+  '対応ドメイン例',
+  '開発分野の対象範囲',
+]);
 
 const StructuredContent: React.FC<{
   parsed: ParsedStructuredText;
@@ -196,6 +219,7 @@ const StructuredContent: React.FC<{
     <div className="space-y-3">
       {parsed.sections.map((section, sectionIndex) => {
         const forceChips = FORCE_CHIP_SECTIONS.has(section.title);
+        const emphasize = EMPHASIZE_SUBTITLE.has(section.title);
 
         const renderItems = (items: string[]) => {
           if (!items.length) return <span className="text-xs text-gray-300">-</span>;
@@ -219,17 +243,27 @@ const StructuredContent: React.FC<{
             );
           }
 
-          // ✅ 基本は常に箇条書き（長さで切替しない）
+          // ✅ For emphasized subtitles, use a distinct "callout list" style
+          if (emphasize) return <SubsectionList items={items} />;
+
+          // default: bullets
           return <BulletList items={items} />;
         };
 
         return (
           <div key={`${section.title || 'section'}-${sectionIndex}`} className="space-y-2">
             {section.title && (
-              <h5 className="text-xs font-bold text-gray-700 flex items-center gap-2">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400" />
-                {section.title}
-              </h5>
+              <div className="flex items-center justify-between">
+                <h5 className="text-xs font-bold text-gray-700 flex items-center gap-2">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400" />
+                  {section.title}
+                </h5>
+                {emphasize && (
+                  <span className="text-[10px] font-semibold text-gray-400 bg-gray-50 border border-gray-100 rounded px-1.5 py-0.5">
+                    SECTION
+                  </span>
+                )}
+              </div>
             )}
 
             {section.items.length > 0 && renderItems(section.items)}
@@ -252,10 +286,6 @@ const StructuredContent: React.FC<{
   );
 };
 
-/**
- * Right-side detail panel showing full information for the selected career node.
- * Shows a placeholder when no node is selected.
- */
 const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeById }) => {
   if (!node) {
     return (
@@ -301,7 +331,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
       common: 'bg-gray-100 text-gray-600',
     }[node.pathType];
 
-  // accents by section
   const accent = {
     summary: 'bg-gray-400',
     skill: trackColorClass,
@@ -324,15 +353,12 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
 
   return (
     <div className="h-full overflow-y-auto p-5 bg-gradient-to-b from-white to-gray-50">
-      {/* Header bar */}
       <div className={`${trackColorClass} h-1.5 rounded-full mb-4`} />
 
-      {/* Role title */}
       <h2 className="text-lg font-bold text-gray-800 leading-snug mb-2">
         {node.titleJa}
       </h2>
 
-      {/* Badges row */}
       <div className="flex flex-wrap gap-1.5 mb-5">
         <span className={`text-xs font-medium px-2 py-0.5 rounded ${trackBadgeClass}`}>
           {TRACK_LABELS[node.track]}
@@ -350,7 +376,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
         )}
       </div>
 
-      {/* Summary */}
       <Section title="概要" accentClass={accent.summary}>
         {summaryStructured ? (
           <StructuredContent parsed={summaryStructured} />
@@ -359,7 +384,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
         )}
       </Section>
 
-      {/* Skills */}
       <Section title="スキル" accentClass={accent.skill}>
         {skillsStructured ? (
           <StructuredContent parsed={skillsStructured} chipColor="bg-blue-50 text-blue-700" />
@@ -368,7 +392,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
         )}
       </Section>
 
-      {/* Experience */}
       <Section title="経験" accentClass={accent.exp}>
         {experienceStructured ? (
           <StructuredContent parsed={experienceStructured} />
@@ -377,7 +400,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
         )}
       </Section>
 
-      {/* Certifications */}
       <Section title="資格" accentClass={accent.cert}>
         {certsStructured ? (
           <StructuredContent parsed={certsStructured} chipColor="bg-green-50 text-green-700" />
@@ -386,24 +408,20 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
         )}
       </Section>
 
-      {/* Tools */}
       <Section title="ツール・環境・言語" accentClass={accent.tools}>
         <TagList items={node.toolsEnvironmentsLanguages} color="bg-gray-50 text-gray-700" />
       </Section>
 
-      {/* Next Step Conditions */}
       <Section title="次の段階に上がる条件" accentClass={accent.next}>
         <BulletList items={node.nextStepConditions} />
       </Section>
 
-      {/* Tags */}
       {node.tags.length > 0 && (
         <Section title="タグ" accentClass={accent.tags}>
           <TagList items={node.tags} />
         </Section>
       )}
 
-      {/* Branch / Coexist Note */}
       {node.branchNote && (
         <Section title="兼任/分岐メモ" accentClass="bg-amber-400">
           <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1 whitespace-pre-line border border-amber-100">
@@ -412,7 +430,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
         </Section>
       )}
 
-      {/* Coexist Nodes */}
       {coexistNodes.length > 0 && (
         <Section title="兼任可能な役職" accentClass={accent.coexist}>
           <div className="space-y-1.5">
@@ -430,7 +447,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
         </Section>
       )}
 
-      {/* Related Nodes */}
       {relatedNodes.length > 0 && (
         <Section title="関連ノード" accentClass={accent.related}>
           <div className="space-y-1.5">
@@ -450,7 +466,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
         </Section>
       )}
 
-      {/* ID for debugging / data reference */}
       <div className="mt-6 pt-3 border-t border-gray-100">
         <p className="text-[10px] text-gray-300">Node ID: {node.id}</p>
       </div>
