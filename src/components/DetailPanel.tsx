@@ -33,11 +33,20 @@ const SUBHEADER_RE = /^[A-Z]\.\s+/;            // A. / B. / C. ...
 // NOTE: "※" は消さない（原文表示したい）ので prefix から除外
 const BULLET_PREFIX_RE = /^[\s・●•▪◦◉◆◇*\-－ー]+/;
 
-/** Section wrapper for consistency */
-const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <div className="mb-4">
-    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">{title}</h4>
-    {children}
+/** === Section Header (more visible) === */
+const Section: React.FC<{
+  title: string;
+  children: React.ReactNode;
+  accentClass?: string; // optional accent color bar
+}> = ({ title, children, accentClass = 'bg-gray-300' }) => (
+  <div className="mb-5">
+    <div className="flex items-center gap-2 mb-2">
+      <span className={`inline-block w-1.5 h-4 rounded-full ${accentClass}`} />
+      <h4 className="text-sm font-bold text-gray-800 tracking-wide">{title}</h4>
+    </div>
+    <div className="bg-white/60 rounded-lg border border-gray-100 p-3">
+      {children}
+    </div>
   </div>
 );
 
@@ -71,9 +80,9 @@ const TagList: React.FC<{ items: string[]; color?: string; wrapLong?: boolean }>
 const BulletList: React.FC<{ items: string[] }> = ({ items }) => {
   if (!items.length) return <span className="text-xs text-gray-300">-</span>;
   return (
-    <ul className="list-disc list-inside text-xs text-gray-600 space-y-0.5">
+    <ul className="list-disc list-inside text-xs text-gray-700 space-y-1">
       {items.map((item, i) => (
-        <li key={i}>{item}</li>
+        <li key={i} className="leading-relaxed">{item}</li>
       ))}
     </ul>
   );
@@ -130,7 +139,6 @@ function parseStructuredText(
   };
 
   for (const rawLine of lines) {
-    // strip common bullets so "・A. ..." also works
     const candidate = normalizeLine(rawLine);
 
     const markerMatch = candidate.match(SECTION_MARKER_RE);
@@ -202,7 +210,7 @@ const StructuredContent: React.FC<{
                 {notes.map((n, i) => (
                   <p
                     key={i}
-                    className="text-xs text-gray-500 leading-relaxed whitespace-pre-line"
+                    className="text-xs text-gray-600 leading-relaxed whitespace-pre-line bg-gray-50 border border-gray-100 rounded px-2 py-1"
                   >
                     {n}
                   </p>
@@ -211,15 +219,15 @@ const StructuredContent: React.FC<{
             );
           }
 
-          // ✅ ここは「長さでチップ/箇条書き切替」しない。常に箇条書き。
+          // ✅ 基本は常に箇条書き（長さで切替しない）
           return <BulletList items={items} />;
         };
 
         return (
           <div key={`${section.title || 'section'}-${sectionIndex}`} className="space-y-2">
             {section.title && (
-              <h5 className="text-[11px] font-bold text-gray-600 flex items-center gap-2">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-300" />
+              <h5 className="text-xs font-bold text-gray-700 flex items-center gap-2">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400" />
                 {section.title}
               </h5>
             )}
@@ -228,7 +236,7 @@ const StructuredContent: React.FC<{
 
             {section.groups.map((group, groupIndex) => (
               <div key={`${group.title}-${groupIndex}`} className="space-y-1.5">
-                <div className="inline-flex items-center gap-2 text-[11px] font-semibold text-gray-600 bg-gray-50 border border-gray-100 rounded px-2 py-1">
+                <div className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-100 rounded px-2 py-1">
                   {group.title}
                 </div>
 
@@ -267,7 +275,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
     );
   }
 
-  // remove redundant first line like "概要" / "必要スキル" etc.
   const summaryStructured = parseStructuredText(node.summary, { stripLeadingHeading: '概要' });
   const skillsStructured = parseStructuredText(node.requiredSkills.join('\n'), { stripLeadingHeading: '必要スキル' });
   const experienceStructured = parseStructuredText(node.requiredExperience.join('\n'), { stripLeadingHeading: '必要経験' });
@@ -294,7 +301,19 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
       common: 'bg-gray-100 text-gray-600',
     }[node.pathType];
 
-  // Resolve related nodes for clickable links
+  // accents by section
+  const accent = {
+    summary: 'bg-gray-400',
+    skill: trackColorClass,
+    exp: 'bg-gray-400',
+    cert: 'bg-emerald-400',
+    tools: 'bg-slate-400',
+    next: 'bg-amber-400',
+    tags: 'bg-gray-400',
+    coexist: 'bg-amber-400',
+    related: 'bg-slate-400',
+  };
+
   const relatedNodes = (node.relatedNodeIds || [])
     .map((id) => getNodeById(id))
     .filter(Boolean) as CareerNode[];
@@ -304,7 +323,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
     .filter(Boolean) as CareerNode[];
 
   return (
-    <div className="h-full overflow-y-auto p-5">
+    <div className="h-full overflow-y-auto p-5 bg-gradient-to-b from-white to-gray-50">
       {/* Header bar */}
       <div className={`${trackColorClass} h-1.5 rounded-full mb-4`} />
 
@@ -314,7 +333,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
       </h2>
 
       {/* Badges row */}
-      <div className="flex flex-wrap gap-1.5 mb-4">
+      <div className="flex flex-wrap gap-1.5 mb-5">
         <span className={`text-xs font-medium px-2 py-0.5 rounded ${trackBadgeClass}`}>
           {TRACK_LABELS[node.track]}
         </span>
@@ -332,26 +351,25 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
       </div>
 
       {/* Summary */}
-      <Section title="概要">
+      <Section title="概要" accentClass={accent.summary}>
         {summaryStructured ? (
           <StructuredContent parsed={summaryStructured} />
         ) : (
-          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{node.summary}</p>
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{node.summary}</p>
         )}
       </Section>
 
-      {/* Skills (必要スキル -> スキル) */}
-      <Section title="スキル">
+      {/* Skills */}
+      <Section title="スキル" accentClass={accent.skill}>
         {skillsStructured ? (
           <StructuredContent parsed={skillsStructured} chipColor="bg-blue-50 text-blue-700" />
         ) : (
-          // ✅ 自動切替しない：スキルはチップで統一（長文は wrapLong で折り返し）
           <TagList items={node.requiredSkills} color="bg-blue-50 text-blue-700" wrapLong />
         )}
       </Section>
 
-      {/* Experience (必要経験 -> 経験) */}
-      <Section title="経験">
+      {/* Experience */}
+      <Section title="経験" accentClass={accent.exp}>
         {experienceStructured ? (
           <StructuredContent parsed={experienceStructured} />
         ) : (
@@ -359,38 +377,36 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
         )}
       </Section>
 
-      {/* Certifications (推奨資格 -> 資格) */}
-      <Section title="資格">
+      {/* Certifications */}
+      <Section title="資格" accentClass={accent.cert}>
         {certsStructured ? (
           <StructuredContent parsed={certsStructured} chipColor="bg-green-50 text-green-700" />
         ) : (
-          // ✅ 自動切替しない：資格はチップで統一（長文は wrapLong で折り返し）
           <TagList items={node.recommendedCerts} color="bg-green-50 text-green-700" wrapLong />
         )}
       </Section>
 
-      {/* Tools / Environments / Languages */}
-      <Section title="ツール・環境・言語">
-        {/* ✅ 自動切替しない：ツールはチップで統一 */}
-        <TagList items={node.toolsEnvironmentsLanguages} color="bg-gray-50 text-gray-600" />
+      {/* Tools */}
+      <Section title="ツール・環境・言語" accentClass={accent.tools}>
+        <TagList items={node.toolsEnvironmentsLanguages} color="bg-gray-50 text-gray-700" />
       </Section>
 
       {/* Next Step Conditions */}
-      <Section title="次の段階に上がる条件">
+      <Section title="次の段階に上がる条件" accentClass={accent.next}>
         <BulletList items={node.nextStepConditions} />
       </Section>
 
       {/* Tags */}
       {node.tags.length > 0 && (
-        <Section title="タグ">
+        <Section title="タグ" accentClass={accent.tags}>
           <TagList items={node.tags} />
         </Section>
       )}
 
       {/* Branch / Coexist Note */}
       {node.branchNote && (
-        <Section title="兼任/分岐メモ">
-          <p className="text-xs text-amber-600 bg-amber-50 rounded px-2 py-1 whitespace-pre-line">
+        <Section title="兼任/分岐メモ" accentClass="bg-amber-400">
+          <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1 whitespace-pre-line border border-amber-100">
             {node.branchNote}
           </p>
         </Section>
@@ -398,15 +414,16 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
 
       {/* Coexist Nodes */}
       {coexistNodes.length > 0 && (
-        <Section title="兼任可能な役職">
-          <div className="space-y-1">
+        <Section title="兼任可能な役職" accentClass={accent.coexist}>
+          <div className="space-y-1.5">
             {coexistNodes.map((cn) => (
               <button
                 key={cn.id}
                 onClick={() => onNodeClick(cn.id)}
-                className="block w-full text-left text-xs px-2 py-1.5 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+                className="block w-full text-left text-xs px-3 py-2 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors border border-amber-100"
               >
-                {cn.shortLabel}（{STAGE_LABELS[cn.stage as Stage]}）
+                <span className="font-semibold">{cn.shortLabel}</span>
+                <span className="text-[11px] text-amber-700">（{STAGE_LABELS[cn.stage as Stage]}）</span>
               </button>
             ))}
           </div>
@@ -415,15 +432,18 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
 
       {/* Related Nodes */}
       {relatedNodes.length > 0 && (
-        <Section title="関連ノード">
-          <div className="space-y-1">
+        <Section title="関連ノード" accentClass={accent.related}>
+          <div className="space-y-1.5">
             {relatedNodes.map((rn) => (
               <button
                 key={rn.id}
                 onClick={() => onNodeClick(rn.id)}
-                className="block w-full text-left text-xs px-2 py-1.5 rounded bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                className="block w-full text-left text-xs px-3 py-2 rounded-lg bg-gray-50 text-gray-800 hover:bg-gray-100 transition-colors border border-gray-100"
               >
-                {rn.shortLabel}（{TRACK_LABELS[rn.track]} / {STAGE_LABELS[rn.stage as Stage]}）
+                <span className="font-semibold">{rn.shortLabel}</span>
+                <span className="text-[11px] text-gray-600">
+                  （{TRACK_LABELS[rn.track]} / {STAGE_LABELS[rn.stage as Stage]}）
+                </span>
               </button>
             ))}
           </div>
