@@ -87,7 +87,7 @@ const BulletList: React.FC<{ items: string[] }> = ({ items }) => {
   );
 };
 
-/** Subsection list: different visual from bullets (no bullet dots) */
+/** Subsection list: distinct visual from bullets */
 const SubsectionList: React.FC<{ items: string[] }> = ({ items }) => {
   if (!items.length) return <span className="text-xs text-gray-300">-</span>;
   return (
@@ -194,7 +194,7 @@ function parseStructuredText(
   return { sections };
 }
 
-// 対応ドメイン例：用語は全部チップ、ただし「※」行は注記として原文表示
+/** 対応ドメイン例：用語は全部チップ、ただし「※」行は注記として原文表示 */
 const FORCE_CHIP_SECTIONS = new Set(['対応ドメイン例']);
 function splitDomainItems(items: string[]) {
   const notes = items.filter((x) => x.startsWith('※'));
@@ -202,14 +202,39 @@ function splitDomainItems(items: string[]) {
   return { chips, notes };
 }
 
-/** Subtitles you want to stand out: render their contents in SubsectionList (not bullets) */
-const EMPHASIZE_SUBTITLE = new Set([
+/**
+ * ✅ “ソタイトル(セクション見出し)”として目立たせたいタイトル一覧
+ * - 役割 / 共通業務 / 分野別業務 / 対応ドメイン例 / 開発分野の対象範囲
+ * - スキル：共通必須 / 選択必須（4領域中...） / 尚可
+ * - 経験：共通必須 / 選択必須（4領域中...） / 尚可
+ * - 資格：共通推奨 / 分野別推奨 / 尚可
+ */
+const EMPHASIZE_SUBTITLE_EXACT = new Set([
   '役割',
   '共通業務',
   '分野別業務',
   '対応ドメイン例',
   '開発分野の対象範囲',
+
+  '共通必須',
+  '尚可',
+
+  '共通推奨',
+  '分野別推奨',
 ]);
+
+function isEmphasizedSubtitle(title: string): boolean {
+  if (!title) return false;
+  if (EMPHASIZE_SUBTITLE_EXACT.has(title)) return true;
+
+  // 選択必須（4領域中2つ以上） / 選択必須（4領域中2〜3つ以上）など揺れ対応
+  if (title.startsWith('選択必須（4領域中')) return true;
+
+  // 分野別推奨（～）の揺れ対応
+  if (title.startsWith('分野別推奨')) return true;
+
+  return false;
+}
 
 const StructuredContent: React.FC<{
   parsed: ParsedStructuredText;
@@ -219,7 +244,7 @@ const StructuredContent: React.FC<{
     <div className="space-y-3">
       {parsed.sections.map((section, sectionIndex) => {
         const forceChips = FORCE_CHIP_SECTIONS.has(section.title);
-        const emphasize = EMPHASIZE_SUBTITLE.has(section.title);
+        const emphasize = isEmphasizedSubtitle(section.title);
 
         const renderItems = (items: string[]) => {
           if (!items.length) return <span className="text-xs text-gray-300">-</span>;
@@ -243,7 +268,7 @@ const StructuredContent: React.FC<{
             );
           }
 
-          // ✅ For emphasized subtitles, use a distinct "callout list" style
+          // ✅ 강조 소제목은 불렛이 아니라 “콜아웃 리스트” 스타일로 구분
           if (emphasize) return <SubsectionList items={items} />;
 
           // default: bullets
@@ -259,8 +284,8 @@ const StructuredContent: React.FC<{
                   {section.title}
                 </h5>
                 {emphasize && (
-                  <span className="text-[10px] font-semibold text-gray-400 bg-gray-50 border border-gray-100 rounded px-1.5 py-0.5">
-                    SECTION
+                  <span className="text-[10px] font-semibold text-gray-500 bg-white border border-gray-200 rounded px-1.5 py-0.5">
+                    SUB
                   </span>
                 )}
               </div>
