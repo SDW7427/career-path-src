@@ -70,26 +70,29 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
     return window.matchMedia?.('(max-width: 768px)').matches ? 110 : 140;
   });
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+useEffect(() => {
+  if (typeof window === 'undefined') return;
 
-    const mql = window.matchMedia('(max-width: 768px)');
-    const update = () => setNodeWidth(mql.matches ? 110 : 140);
+  const mql = window.matchMedia('(max-width: 768px)');
+  const update = () => setNodeWidth(mql.matches ? 110 : 140);
 
-    // 초기 1회 반영
-    update();
+  // 초기 1회 반영
+  update();
 
-    // 브라우저별 호환
-    if (typeof mql.addEventListener === 'function') {
-      mql.addEventListener('change', update);
-      return () => mql.removeEventListener('change', update);
-    }
-    // @ts-expect-error older safari
-    mql.addListener(update);
-    // @ts-expect-error older safari
-    return () => mql.removeListener(update);
-  }, []);
+  // 최신 브라우저
+  if (typeof mql.addEventListener === 'function') {
+    mql.addEventListener('change', update);
+    return () => mql.removeEventListener('change', update);
+  }
 
+  // 구형 브라우저 (deprecated지만 일부 환경에서 남아있음)
+  if (typeof (mql as MediaQueryList).addListener === 'function') {
+    (mql as MediaQueryList).addListener(update);
+    return () => (mql as MediaQueryList).removeListener(update);
+  }
+
+  return;
+}, []);
   // Convert CareerNode[] → React Flow Node[]
   const rfNodes: Node[] = useMemo(() => {
     return careerNodes.map((cn) => ({
