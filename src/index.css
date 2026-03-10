@@ -82,13 +82,20 @@ html, body, #root {
   border: 2px solid #e2e8f0;
   padding: 10px 14px;
   min-width: 140px;
-  max-width: 180px;
+  max-width: 140px;
   background: white;
   cursor: pointer;
   transition: all 0.15s ease;
   font-size: 13px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
+
+@media (max-width: 768px) {
+  .career-node {
+    /* ✅ 폭은 고정 유지 (레이아웃/엣지 정렬 유지) */
+    padding: 8px 10px;
+    font-size: 11px;
+  }
 
 /* Manager トラックのノードは点線（どのトラック/分類でも共通） */
 .career-node.path-manager {
