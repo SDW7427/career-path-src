@@ -61,7 +61,7 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   const rfNodes: Node[] = useMemo(() => {
     return careerNodes.map((cn) => ({
       id: cn.id,
-      type: 'straight',
+      type: 'careerNode',
       position: cn.position,
       data: {
         nodeId: cn.id,
