@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useEffect } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -11,12 +11,12 @@ import {
   type NodeMouseHandler,
   BackgroundVariant,
   type ColorMode,
+  type ReactFlowInstance,
 } from '@xyflow/react';
-
 import CareerNodeComponent from './CareerNode';
 import type { CareerNodeData } from './CareerNode';
 import StageLaneOverlay from './StageLaneOverlay';
-import type { CareerNode as CareerNodeType, CareerEdge, Track, PathType } from '../types/career';
+import type { CareerNode as CareerNodeType, CareerEdge, Track } from '../types/career';
 
 interface SkillTreeGraphProps {
   careerNodes: CareerNodeType[];
@@ -43,92 +43,9 @@ function edgeClassName(type: CareerEdge['type']): string {
 
 const nodeTypes = { careerNode: CareerNodeComponent };
 
-/** ===== Layout constants (match StageLaneOverlay) ===== */
-const STAGE_Y_BASE = 50;
-const STAGE_Y_GAP = 150;
-const MAX_STAGE = 6;
-
-/** Node position is top-left */
-const NODE_HALF_WIDTH = 70;
-
-type LaneMap = Record<string, Partial<Record<PathType, number>> & { center: number }>;
-
-const TRACK_LANES: Record<Track, LaneMap> = {
-  development: {
-    'Webアプリケーション': { specialist: 80, manager: 260, common: 170, center: 170 },
-    'モバイルアプリ': { specialist: 500, manager: 680, common: 590, center: 590 },
-  },
-  infrastructure: {
-    'サーバー': { specialist: 80, manager: 260, common: 170, center: 170 },
-    'ネットワーク': { specialist: 500, manager: 680, common: 590, center: 590 },
-  },
-  'it-support': {
-    'ITサポート': { manager: 100, common: 100, center: 100 },
-    '情シス支援': { manager: 350, common: 350, center: 350 },
-    'PMO支援': { manager: 600, common: 600, center: 600 },
-  },
-};
-
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
-}
-
-/** ✅ stage가 "段階6" 같은 문자열이어도 안전하게 숫자로 변환 */
-function coerceStage(value: unknown): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return clamp(value, 1, MAX_STAGE);
-
-  if (typeof value === 'string') {
-    // "6", "段階6", "段階 6" etc
-    const m = value.match(/\d+/);
-    if (m) {
-      const n = Number(m[0]);
-      if (Number.isFinite(n)) return clamp(n, 1, MAX_STAGE);
-    }
-  }
-  // fallback
-  return 1;
-}
-
-function stageToY(stageValue: unknown): number {
-  const stage = coerceStage(stageValue);
-  return STAGE_Y_BASE + (MAX_STAGE - stage) * STAGE_Y_GAP;
-}
-
-/** when subtrack is missing / slightly different, infer from existing x */
-function inferSubtrack(track: Track, x: number): string {
-  if (track === 'it-support') {
-    if (x < 220) return 'ITサポート';
-    if (x < 470) return '情シス支援';
-    return 'PMO支援';
-  }
-  if (x < 380) return track === 'development' ? 'Webアプリケーション' : 'サーバー';
-  return track === 'development' ? 'モバイルアプリ' : 'ネットワーク';
-}
-
-function snapNodePosition(node: CareerNodeType): { x: number; y: number } {
-  const y = stageToY((node as any).stage);
-
-  const laneMap = TRACK_LANES[node.track];
-  const rawX = (node.position as any)?.x ?? 0;
-
-  const sub =
-    node.subtrack && laneMap[node.subtrack]
-      ? node.subtrack
-      : inferSubtrack(node.track, rawX);
-
-  const lane = laneMap[sub];
-
-  const centerX =
-    (lane && lane[node.pathType as PathType]) ??
-    (lane ? lane.center : rawX + NODE_HALF_WIDTH);
-
-  const x = centerX - NODE_HALF_WIDTH;
-
-  return { x, y };
-}
-
 /**
  * Main skill-tree graph using React Flow.
+ * Renders career nodes and edges for the active track.
  */
 const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   careerNodes,
@@ -140,78 +57,50 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   showMiniMap = true,
   showControls = true,
 }) => {
-  // ✅ robust default (in case parent briefly passes undefined)
-  const safeNodes = careerNodes ?? [];
-  const safeEdges = careerEdges ?? [];
-
-  /** Precompute snapped positions for consistent edge handle decisions */
-  const snappedPosById = useMemo(() => {
-    const m = new Map<string, { x: number; y: number }>();
-    for (const cn of safeNodes) m.set(cn.id, snapNodePosition(cn));
-    return m;
-  }, [safeNodes]);
-
-  /** Snap all nodes onto fixed lanes + stage rows so edges become straight */
+  // Convert CareerNode[] → React Flow Node[]
   const rfNodes: Node[] = useMemo(() => {
-    return safeNodes.map((cn) => {
-      const snapped = snappedPosById.get(cn.id) ?? snapNodePosition(cn);
+    return careerNodes.map((cn) => ({
+      id: cn.id,
+      type: 'careerNode',
+      position: cn.position,
+      data: {
+        nodeId: cn.id,
+        shortLabel: cn.shortLabel,
+        titleJa: cn.titleJa,
+        stage: cn.stage,
+        pathType: cn.pathType,
+        track: cn.track,
+        subtrack: cn.subtrack,
+        styleKey: cn.styleKey,
+        isSelected: cn.id === selectedNodeId,
+        isConnected: connectedNodeIds.has(cn.id),
+      } satisfies CareerNodeData,
+    }));
+  }, [careerNodes, selectedNodeId, connectedNodeIds]);
 
-      return {
-        id: cn.id,
-        type: 'careerNode',
-        position: snapped,
-        data: {
-          nodeId: cn.id,
-          shortLabel: cn.shortLabel,
-          titleJa: cn.titleJa,
-          stage: cn.stage,
-          pathType: cn.pathType,
-          track: cn.track,
-          subtrack: cn.subtrack,
-          styleKey: cn.styleKey,
-          isSelected: cn.id === selectedNodeId,
-          isConnected: connectedNodeIds.has(cn.id),
-        } satisfies CareerNodeData,
-      };
-    });
-  }, [safeNodes, snappedPosById, selectedNodeId, connectedNodeIds]);
-
-  /** Convert CareerEdge[] → React Flow Edge[] */
+  // Convert CareerEdge[] → React Flow Edge[]
   const rfEdges: Edge[] = useMemo(() => {
-    const nodeMeta = new Map(safeNodes.map((node) => [node.id, node]));
+    const nodeMeta = new Map(careerNodes.map((node) => [node.id, node]));
 
-    return safeEdges.map((ce, idx) => {
+    return careerEdges.map((ce, idx) => {
       const sourceNode = nodeMeta.get(ce.source);
       const targetNode = nodeMeta.get(ce.target);
-
-      const sourcePos = snappedPosById.get(ce.source);
-      const targetPos = snappedPosById.get(ce.target);
-
-      const sourceStage = sourceNode ? coerceStage((sourceNode as any).stage) : NaN;
-      const targetStage = targetNode ? coerceStage((targetNode as any).stage) : NaN;
-
       const isSameStage =
-        Number.isFinite(sourceStage) &&
-        Number.isFinite(targetStage) &&
-        sourceStage === targetStage;
+        sourceNode !== undefined &&
+        targetNode !== undefined &&
+        sourceNode.stage === targetNode.stage;
 
       const sourceIsLeft =
-        sourcePos && targetPos ? sourcePos.x <= targetPos.x : true;
+        sourceNode !== undefined && targetNode !== undefined
+          ? sourceNode.position.x <= targetNode.position.x
+          : true;
 
       return {
         id: `e-${ce.source}-${ce.target}-${idx}`,
         source: ce.source,
         target: ce.target,
-        sourceHandle: isSameStage
-          ? sourceIsLeft
-            ? 'source-right'
-            : 'source-left'
-          : 'source-top',
-        targetHandle: isSameStage
-          ? sourceIsLeft
-            ? 'target-left'
-            : 'target-right'
-          : 'target-bottom',
+        sourceHandle: isSameStage ? (sourceIsLeft ? 'source-right' : 'source-left') : 'source-top',
+        targetHandle: isSameStage ? (sourceIsLeft ? 'target-left' : 'target-right') : 'target-bottom',
         className: edgeClassName(ce.type),
         label: ce.label || undefined,
         animated: ce.type === 'cross-track',
@@ -222,17 +111,27 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
               ? { stroke: '#94a3b8', strokeDasharray: '6 4' }
               : { stroke: '#94a3b8' },
         labelStyle: { fontSize: 10, fill: '#64748b' },
-
-        // ✅ All edges straight
-        type: 'straight',
+        // 段階の進行エッジ（例: 段階1→2）は直線で描画したい
+        type: ce.type === 'cross-track' ? 'smoothstep' : 'straight',
       };
     });
-  }, [safeEdges, safeNodes, snappedPosById]);
+  }, [careerEdges, careerNodes]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges);
 
-  /** Sync when source data changes */
+  // IMPORTANT: useState here (not only useRef) so that fitView logic reruns after onInit.
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
+
+  // Hide the graph until the *first* fitView is applied, so users never see the default (0,0,zoom=1)
+  // viewport flash and then a sudden jump. We keep the graph mounted (opacity 0) so measurement works.
+  const [isInitialViewportReady, setIsInitialViewportReady] = useState(false);
+  const hasInitialFitRef = useRef(false);
+
+  // Fit once per *visible node set* (track/subtrack changes), not for selection/highlight changes.
+  const lastFitSigRef = useRef<string>('');
+
+  // Sync when source data changes (track switch, selection change)
   useEffect(() => {
     setNodes(rfNodes);
   }, [rfNodes, setNodes]);
@@ -248,7 +147,7 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
     [onNodeClick]
   );
 
-  /** Track-specific minimap colors */
+  // Track-specific minimap colors
   const minimapColor = useMemo(() => {
     switch (track) {
       case 'development':
@@ -260,34 +159,164 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
     }
   }, [track]);
 
+  // Signature based only on visible node IDs
+  const fitSignature = useMemo(() => rfNodes.map((n) => n.id).join('|'), [rfNodes]);
+
+  useEffect(() => {
+    const inst = rfInstance;
+    if (!inst) return;
+    if (nodes.length === 0) return;
+
+    // Only for the very first paint: keep hidden until we actually applied fitView.
+    if (!hasInitialFitRef.current) {
+      setIsInitialViewportReady(false);
+    }
+
+    // If the visible node set didn't change, never refit.
+    if (lastFitSigRef.current === fitSignature) return;
+
+    let cancelled = false;
+    let rafId = 0;
+    let attempts = 0;
+
+    const isNodeMeasured = (n: any) => {
+      const w = n?.measured?.width ?? n?.width ?? 0;
+      const h = n?.measured?.height ?? n?.height ?? 0;
+      return w > 0 && h > 0;
+    };
+
+    const isMobile = () => {
+      if (typeof window === 'undefined') return false;
+      return window.matchMedia?.('(max-width: 767px)').matches ?? false;
+    };
+
+    const runFit = () => {
+      if (cancelled) return;
+
+      const currentNodes = inst.getNodes?.() ?? [];
+      const ready = currentNodes.length > 0 && currentNodes.every(isNodeMeasured);
+
+      attempts += 1;
+      if (!ready && attempts < 120) {
+        rafId = requestAnimationFrame(runFit);
+        return;
+      }
+
+      // Desktop: zoom OUT more (bigger padding). Mobile: zoom IN a bit.
+      const padding = isMobile() ? 0.14 : 0.40;
+
+      inst.fitView({ padding });
+
+      // Extra micro-adjust for desktop: keep it visually centered in the left canvas.
+      // (fitView sometimes feels left-biased when node positions start near x=0)
+      if (!isMobile()) {
+        const vp = inst.getViewport?.();
+        if (vp) {
+          inst.setViewport({ x: vp.x + 24, y: vp.y + 8, zoom: vp.zoom }, { duration: 0 });
+        }
+      }
+
+      lastFitSigRef.current = fitSignature;
+
+      // Mark initial viewport as ready so we can reveal the graph.
+      if (!hasInitialFitRef.current) {
+        hasInitialFitRef.current = true;
+        setIsInitialViewportReady(true);
+      }
+    };
+
+    const run = () => {
+      if (cancelled) return;
+      // Two-phase paint: wait for React commit + layout.
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        rafId = requestAnimationFrame(runFit);
+      });
+    };
+
+    const fontsReady = (typeof document !== 'undefined' && (document as any).fonts?.ready) as
+      | Promise<unknown>
+      | undefined;
+
+    if (fontsReady) {
+      void fontsReady.then(run).catch(run);
+    } else {
+      run();
+    }
+
+    return () => {
+      cancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [rfInstance, fitSignature, nodes.length]);
+
   return (
-    <div className="h-full w-full relative">
-      <StageLaneOverlay track={track} />
-
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={handleNodeClick}
-        nodeTypes={nodeTypes}
-        fitView
-        colorMode={'light' as ColorMode}
-        proOptions={{ hideAttribution: true }}
+    <div className="w-full h-full relative">
+      {/* Keep the graph mounted for measurement, but hide it until initial fitView completes. */}
+      <div
+        className={`absolute inset-0 transition-opacity duration-150 ${
+          isInitialViewportReady ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{ pointerEvents: isInitialViewportReady ? 'auto' : 'none' }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
-        {showControls && <Controls showInteractive={false} />}
-        {showMiniMap && (
-          <MiniMap
-            nodeColor={() => minimapColor}
-            maskColor="rgba(0,0,0,0.06)"
-            pannable
-            zoomable
-          />
-        )}
-      </ReactFlow>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={handleNodeClick}
+          onInit={(inst) => setRfInstance(inst)}
+          nodeTypes={nodeTypes}
+          minZoom={0.3}
+          maxZoom={1.5}
+          colorMode={'light' as ColorMode}
+          proOptions={{ hideAttribution: true }}
+          nodesDraggable={false}
+        >
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
+          {showControls && (
+            <Controls showInteractive={false} className="!bg-white !border-gray-200 !shadow-sm" />
+          )}
+          {showMiniMap && (
+            <MiniMap
+              nodeColor={minimapColor}
+              maskColor="rgba(0,0,0,0.08)"
+              className="!bg-white !border-gray-200"
+              pannable
+              zoomable
+            />
+          )}
+          {/* Stage lane labels overlay */}
+          <StageLaneOverlay track={track} />
+        </ReactFlow>
+      </div>
 
-      <div className="absolute bottom-3 left-3 text-[11px] text-gray-400 bg-white/70 border border-gray-100 rounded px-2 py-1">
+      {/* Skeleton overlay during the tiny window before the first fitView */}
+      {!isInitialViewportReady && (
+        <div className="absolute inset-0 bg-white pointer-events-none">
+          <div className="absolute inset-0 animate-pulse">
+            {/* faint canvas blocks to suggest the graph */}
+            <div className="absolute left-8 top-8 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-56 top-8 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-8 top-24 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-56 top-24 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-8 top-40 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-56 top-40 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-8 top-56 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-56 top-56 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-8 top-72 h-10 w-40 rounded bg-gray-100" />
+            <div className="absolute left-56 top-72 h-10 w-40 rounded bg-gray-100" />
+
+            {/* minimap placeholder (desktop only) */}
+            {showMiniMap && (
+              <div className="absolute bottom-8 right-8 h-40 w-56 rounded bg-gray-100" />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Legend note */}
+      <div className="absolute bottom-2 left-2 text-[10px] text-gray-400 bg-white/80 px-2 py-1 rounded">
         ※ SpecialistやManagerは兼任可能
       </div>
     </div>
