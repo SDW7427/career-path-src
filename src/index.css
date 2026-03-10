@@ -90,18 +90,6 @@ html, body, #root {
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
-@media (max-width: 768px) {
-  .career-node {
-    /* ✅ 폭은 고정 유지 (레이아웃/엣지 정렬 유지) */
-    padding: 8px 10px;
-    font-size: 11px;
-  }
-
-/* Manager トラックのノードは点線（どのトラック/分類でも共通） */
-.career-node.path-manager {
-  border-style: dashed;
-}
-
 .career-node:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.10);
   transform: translateY(-1px);
