@@ -202,13 +202,7 @@ function splitDomainItems(items: string[]) {
   return { chips, notes };
 }
 
-/**
- * ✅ “ソタイトル(セクション見出し)”として目立たせたいタイトル一覧
- * - 役割 / 共通業務 / 分野別業務 / 対応ドメイン例 / 開発分野の対象範囲
- * - スキル：共通必須 / 選択必須（4領域中...） / 尚可
- * - 経験：共通必須 / 選択必須（4領域中...） / 尚可
- * - 資格：共通推奨 / 分野別推奨 / 尚可
- */
+/** “ソタイトル(セクション見出し)”として目立たせたいタイトル */
 const EMPHASIZE_SUBTITLE_EXACT = new Set([
   '役割',
   '共通業務',
@@ -226,15 +220,44 @@ const EMPHASIZE_SUBTITLE_EXACT = new Set([
 function isEmphasizedSubtitle(title: string): boolean {
   if (!title) return false;
   if (EMPHASIZE_SUBTITLE_EXACT.has(title)) return true;
-
-  // 選択必須（4領域中2つ以上） / 選択必須（4領域中2〜3つ以上）など揺れ対応
   if (title.startsWith('選択必須（4領域中')) return true;
-
-  // 分野別推奨（～）の揺れ対応
   if (title.startsWith('分野別推奨')) return true;
-
   return false;
 }
+
+/** ✅ A/B/C/D 그룹은 접어서 볼 수 있게(아코디언) */
+function isCollapsibleGroupSection(title: string): boolean {
+  if (!title) return false;
+  if (title === '分野別業務') return true;
+  if (title.startsWith('選択必須（4領域中')) return true;
+  if (title.startsWith('分野別推奨')) return true;
+  return false;
+}
+
+const CollapsibleGroup: React.FC<{
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}> = ({ title, children, defaultOpen = false }) => (
+  <details className="group" open={defaultOpen}>
+    <summary
+      className={[
+        'cursor-pointer select-none',
+        'inline-flex items-center gap-2',
+        'text-xs font-semibold text-gray-700',
+        'bg-gray-50 border border-gray-100 rounded px-2 py-1',
+        // hide default marker
+        'list-none [&::-webkit-details-marker]:hidden',
+      ].join(' ')}
+    >
+      <span className="inline-block text-gray-400 transition-transform group-open:rotate-90">▸</span>
+      {title}
+    </summary>
+    <div className="mt-2 pl-1">
+      {children}
+    </div>
+  </details>
+);
 
 const StructuredContent: React.FC<{
   parsed: ParsedStructuredText;
@@ -245,6 +268,7 @@ const StructuredContent: React.FC<{
       {parsed.sections.map((section, sectionIndex) => {
         const forceChips = FORCE_CHIP_SECTIONS.has(section.title);
         const emphasize = isEmphasizedSubtitle(section.title);
+        const collapsibleGroups = isCollapsibleGroupSection(section.title);
 
         const renderItems = (items: string[]) => {
           if (!items.length) return <span className="text-xs text-gray-300">-</span>;
@@ -268,42 +292,47 @@ const StructuredContent: React.FC<{
             );
           }
 
-          // ✅ 강조 소제목은 불렛이 아니라 “콜아웃 리스트” 스타일로 구분
+          // 강조 소제목은 “콜아웃 리스트” 스타일로 구분
           if (emphasize) return <SubsectionList items={items} />;
 
-          // default: bullets
           return <BulletList items={items} />;
         };
 
         return (
           <div key={`${section.title || 'section'}-${sectionIndex}`} className="space-y-2">
             {section.title && (
-              <div className="flex items-center justify-between">
-                <h5 className="text-xs font-bold text-gray-700 flex items-center gap-2">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400" />
-                  {section.title}
-                </h5>
-                {emphasize && (
-                  <span className="text-[10px] font-semibold text-gray-500 bg-white border border-gray-200 rounded px-1.5 py-0.5">
-                    SUB
-                  </span>
-                )}
-              </div>
+              <h5 className="text-xs font-bold text-gray-700 flex items-center gap-2">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400" />
+                {section.title}
+              </h5>
             )}
 
             {section.items.length > 0 && renderItems(section.items)}
 
-            {section.groups.map((group, groupIndex) => (
-              <div key={`${group.title}-${groupIndex}`} className="space-y-1.5">
-                <div className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-100 rounded px-2 py-1">
-                  {group.title}
-                </div>
+            {section.groups.map((group, groupIndex) => {
+              const body = renderItems(group.items);
 
-                <div className="pl-1">
-                  {renderItems(group.items)}
+              // ✅ 분야별(A/B/C/D) 같은 그룹이 있는 섹션은 아코디언으로 렌더
+              if (collapsibleGroups) {
+                return (
+                  <div key={`${group.title}-${groupIndex}`} className="space-y-1.5">
+                    <CollapsibleGroup title={group.title} defaultOpen={false}>
+                      {body}
+                    </CollapsibleGroup>
+                  </div>
+                );
+              }
+
+              // 일반 그룹은 그대로
+              return (
+                <div key={`${group.title}-${groupIndex}`} className="space-y-1.5">
+                  <div className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-100 rounded px-2 py-1">
+                    {group.title}
+                  </div>
+                  <div className="pl-1">{body}</div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         );
       })}
