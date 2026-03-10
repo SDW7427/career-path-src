@@ -25,6 +25,10 @@ interface SkillTreeGraphProps {
   connectedNodeIds: Set<string>;
   track: Track;
   onNodeClick: (nodeId: string) => void;
+
+  // ✅ App.tsx에서 넘기는 props를 수용
+  showMiniMap?: boolean;
+  showControls?: boolean;
 }
 
 /** Map CareerEdge.type to CSS class */
@@ -49,7 +53,6 @@ const MAX_STAGE = 6;
 /**
  * React Flow position is top-left.
  * Your node CSS has min-width 140px, so half = 70px is a good stable snap target.
- * (If you later make width fixed, adjust this.)
  */
 const NODE_HALF_WIDTH = 70;
 
@@ -72,19 +75,16 @@ const TRACK_LANES: Record<Track, LaneMap> = {
 };
 
 function stageToY(stage: number): number {
-  // Align exactly with StageLaneOverlay: rawY = base + (6 - stage) * gap
   return STAGE_Y_BASE + (MAX_STAGE - stage) * STAGE_Y_GAP;
 }
 
 /** when subtrack is missing / slightly different, infer from existing x */
 function inferSubtrack(track: Track, x: number): string {
-  // x here is top-left, but we compare roughly; it’s fine.
   if (track === 'it-support') {
     if (x < 220) return 'ITサポート';
     if (x < 470) return '情シス支援';
     return 'PMO支援';
   }
-  // dev/infra have 2 groups
   if (x < 380) return track === 'development' ? 'Webアプリケーション' : 'サーバー';
   return track === 'development' ? 'モバイルアプリ' : 'ネットワーク';
 }
@@ -102,7 +102,6 @@ function snapNodePosition(node: CareerNodeType): { x: number; y: number } {
 
   const lane = laneMap[sub] ?? undefined;
 
-  // Decide centerX (lane center) by pathType, fallback to group center
   const centerX =
     (lane && lane[node.pathType as PathType]) ??
     (lane ? lane.center : rawX + NODE_HALF_WIDTH);
@@ -114,7 +113,6 @@ function snapNodePosition(node: CareerNodeType): { x: number; y: number } {
 
 /**
  * Main skill-tree graph using React Flow.
- * Renders career nodes and edges for the active track.
  */
 const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   careerNodes,
@@ -123,6 +121,8 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   connectedNodeIds,
   track,
   onNodeClick,
+  showMiniMap = true,
+  showControls = true,
 }) => {
   /** Snap all nodes onto fixed lanes + stage rows so edges become straight */
   const rfNodes: Node[] = useMemo(() => {
@@ -164,7 +164,7 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
 
       const sourceIsLeft =
         sourceNode !== undefined && targetNode !== undefined
-          ? sourceNode.position.x <= targetNode.position.x
+          ? (sourceNode.position?.x ?? 0) <= (targetNode.position?.x ?? 0)
           : true;
 
       return {
@@ -231,7 +231,6 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
 
   return (
     <div className="h-full w-full relative">
-      {/* Stage lane labels overlay */}
       <StageLaneOverlay track={track} />
 
       <ReactFlow
@@ -246,17 +245,19 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
-        <Controls showInteractive={false} />
 
-        <MiniMap
-          nodeColor={() => minimapColor}
-          maskColor="rgba(0,0,0,0.06)"
-          pannable
-          zoomable
-        />
+        {showControls && <Controls showInteractive={false} />}
+
+        {showMiniMap && (
+          <MiniMap
+            nodeColor={() => minimapColor}
+            maskColor="rgba(0,0,0,0.06)"
+            pannable
+            zoomable
+          />
+        )}
       </ReactFlow>
 
-      {/* Legend note */}
       <div className="absolute bottom-3 left-3 text-[11px] text-gray-400 bg-white/70 border border-gray-100 rounded px-2 py-1">
         ※ SpecialistやManagerは兼任可能
       </div>
