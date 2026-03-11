@@ -238,13 +238,3 @@ html, body, #root {
     font-size: 11px;
   }
 }
-
-.career-node .path-badge.dual-specialist {
-  background: #f0f9ff;
-  color: #0369a1;
-}
-
-.career-node .path-badge.dual-manager {
-  background: #fefce8;
-  color: #a16207;
-}
