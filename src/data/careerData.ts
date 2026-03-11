@@ -10,23 +10,30 @@ const stageY = (stage: number) => BASE_Y + (6 - stage) * STAGE_Y_GAP;
 
 const STAGES = [1, 2, 3, 4, 5, 6] as const;
 
+// Base node widths used for positioning common nodes more precisely
+const DEFAULT_NODE_WIDTH = 140;
+const COMMON_NODE_WIDTH = 196;
+const COMMON_X_OFFSET = Math.round((DEFAULT_NODE_WIDTH - COMMON_NODE_WIDTH) / 2);
+
 // Development
 const DEV_WEB_SP_X = 80;
 const DEV_WEB_MG_X = 260;
-const DEV_WEB_COMMON_X = Math.round((DEV_WEB_SP_X + DEV_WEB_MG_X) / 2);
+const DEV_WEB_COMMON_X = Math.round((DEV_WEB_SP_X + DEV_WEB_MG_X) / 2) + COMMON_X_OFFSET;
 
 const DEV_MOBILE_SP_X = 500;
 const DEV_MOBILE_MG_X = 680;
-const DEV_MOBILE_COMMON_X = Math.round((DEV_MOBILE_SP_X + DEV_MOBILE_MG_X) / 2);
+const DEV_MOBILE_COMMON_X = Math.round((DEV_MOBILE_SP_X + DEV_MOBILE_MG_X) / 2) + COMMON_X_OFFSET;
 
 // Infrastructure
 const INFRA_SERVER_SP_X = 80;
 const INFRA_SERVER_MG_X = 260;
-const INFRA_SERVER_COMMON_X = Math.round((INFRA_SERVER_SP_X + INFRA_SERVER_MG_X) / 2);
+const INFRA_SERVER_COMMON_X =
+  Math.round((INFRA_SERVER_SP_X + INFRA_SERVER_MG_X) / 2) + COMMON_X_OFFSET;
 
 const INFRA_NETWORK_SP_X = 500;
 const INFRA_NETWORK_MG_X = 680;
-const INFRA_NETWORK_COMMON_X = Math.round((INFRA_NETWORK_SP_X + INFRA_NETWORK_MG_X) / 2);
+const INFRA_NETWORK_COMMON_X =
+  Math.round((INFRA_NETWORK_SP_X + INFRA_NETWORK_MG_X) / 2) + COMMON_X_OFFSET;
 
 // IT Support
 const ITS_IT_X = 100;
@@ -49,28 +56,28 @@ type StageMeta = {
 
 const DEV_COMMON_META: StageMeta = {
   titleJa: 'プログラム改修／テスト',
-  shortLabel: '改修/テスト',
+  shortLabel: 'プログラム改修・テスト',
 };
 
 const DEV_SP_META: Record<number, StageMeta> = {
   2: { titleJa: 'PG（プログラミング）', shortLabel: 'PG' },
-  3: { titleJa: 'SE（詳細設計）', shortLabel: 'SE(詳細設計)' },
-  4: { titleJa: 'SE（基本設計）', shortLabel: 'SE(基本設計)' },
-  5: { titleJa: 'SE（要件定義）', shortLabel: 'SE(要件定義)' },
-  6: { titleJa: 'TL（技術責任）', shortLabel: 'TL(技術責任)' },
+  3: { titleJa: 'SE（詳細設計）', shortLabel: 'SE（詳細設計）' },
+  4: { titleJa: 'SE（基本設計）', shortLabel: 'SE（基本設計）' },
+  5: { titleJa: 'SE（要件定義）', shortLabel: 'SE（要件定義）' },
+  6: { titleJa: 'TL（技術責任）', shortLabel: 'TL（技術責任）' },
 };
 
 const DEV_MG_META: Record<number, StageMeta> = {
   2: { titleJa: 'サブリーダー', shortLabel: 'サブリーダー' },
   3: { titleJa: 'リーダー', shortLabel: 'リーダー' },
   4: { titleJa: 'サブPL', shortLabel: 'サブPL' },
-  5: { titleJa: 'PL／サブPM', shortLabel: 'PL/サブPM' },
+  5: { titleJa: 'PL／サブPM', shortLabel: 'PL／サブPM' },
   6: { titleJa: 'PM', shortLabel: 'PM' },
 };
 
 const INFRA_COMMON_META: StageMeta = {
   titleJa: '運用監視補助・ヘルプデスク',
-  shortLabel: '運用監視補助/HD',
+  shortLabel: '運用監視補助・ヘルプデスク',
 };
 
 const INFRA_SP_META: Record<number, StageMeta> = {
@@ -78,7 +85,7 @@ const INFRA_SP_META: Record<number, StageMeta> = {
   3: { titleJa: '運用保守', shortLabel: '運用保守' },
   4: { titleJa: '構築・設定', shortLabel: '構築・設定' },
   5: { titleJa: 'システム設計', shortLabel: 'システム設計' },
-  6: { titleJa: 'TL（技術責任）', shortLabel: 'TL(技術責任)' },
+  6: { titleJa: 'TL（技術責任）', shortLabel: 'TL（技術責任）' },
 };
 
 const INFRA_MG_META: Record<number, StageMeta> = {
@@ -86,11 +93,11 @@ const INFRA_MG_META: Record<number, StageMeta> = {
   3: { titleJa: 'リーダー', shortLabel: 'リーダー' },
   4: { titleJa: 'サブPM', shortLabel: 'サブPM' },
   5: { titleJa: 'PM', shortLabel: 'PM' },
-  6: { titleJa: 'PM／インフラマネージャ', shortLabel: 'PM/インフラMgr' },
+  6: { titleJa: 'PM／インフラマネージャ', shortLabel: 'PM／インフラMgr' },
 };
 
 const ITS_IT_META: Record<number, StageMeta> = {
-  1: { titleJa: 'キッティング・ヘルプデスク（オペレーター）', shortLabel: 'キッティング/HD' },
+  1: { titleJa: 'キッティング・ヘルプデスク（オペレーター）', shortLabel: 'キッティング／HD' },
   2: { titleJa: 'ジュニアオペレーター', shortLabel: 'Jr.オペレーター' },
   3: { titleJa: 'サブリーダー', shortLabel: 'サブリーダー' },
   4: { titleJa: 'リーダー', shortLabel: 'リーダー' },
@@ -165,7 +172,6 @@ function buildDualPathTrack(args: {
 }): CareerNode[] {
   const nodes: CareerNode[] = [];
 
-  // Stage 1: one common node
   nodes.push(
     createNode({
       id: `${args.idPrefix}-common-1`,
@@ -178,7 +184,6 @@ function buildDualPathTrack(args: {
     })
   );
 
-  // Stage 2-6: specialist / manager
   for (const stage of [2, 3, 4, 5, 6] as const) {
     nodes.push(
       createNode({
@@ -424,23 +429,14 @@ export const fullDataSet: CareerDataSet = {
   edges: allEdges,
 };
 
-/**
- * Helper: Get nodes filtered by track
- */
 export function getNodesByTrack(track: Track): CareerNode[] {
   return allNodes.filter((n) => n.track === track);
 }
 
-/**
- * Helper: Get edges relevant to a set of node IDs
- */
 export function getEdgesForNodes(nodeIds: Set<string>): CareerEdge[] {
   return allEdges.filter((e) => nodeIds.has(e.source) || nodeIds.has(e.target));
 }
 
-/**
- * Helper: Get a single node by ID
- */
 export function getNodeById(id: string): CareerNode | undefined {
   return allNodes.find((n) => n.id === id);
 }

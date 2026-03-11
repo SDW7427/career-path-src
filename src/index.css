@@ -24,13 +24,10 @@
   /* Path type fills (reference: original zip) */
   --color-specialist: #f0f9ff;   /* sky-50 */
   --color-manager: #fefce8;      /* yellow-50 */
-  /* Common nodes are white in the original design */
   --color-common: #ffffff;
-  /* 段階1 ノード背景 */
   --color-stage1: #F7FBF4;
 }
 
-/* Ensure the page fills viewport */
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -41,17 +38,14 @@ html, body, #root {
    React Flow customization
    ============================================================ */
 
-/* Stage lane backgrounds (rendered as horizontal bands) */
 .react-flow__pane {
   background-color: #fafbfc !important;
 }
 
-/* Hide default React Flow attribution for wireframe */
 .react-flow__attribution {
   display: none !important;
 }
 
-/* Edge styles */
 .react-flow__edge-path {
   stroke-width: 2;
 }
@@ -81,8 +75,8 @@ html, body, #root {
   border-radius: 8px;
   border: 2px solid #e2e8f0;
   padding: 10px 14px;
-  min-width: 168px;
-  max-width: 168px;
+  min-width: 140px;
+  max-width: 140px;
   background: white;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -95,7 +89,6 @@ html, body, #root {
   transform: translateY(-1px);
 }
 
-/* Track-specific border colors */
 .career-node.track-development {
   border-color: var(--color-dev);
 }
@@ -105,10 +98,6 @@ html, body, #root {
 .career-node.track-it-support {
   border-color: var(--color-its);
 }
-
-/* ============================================================
-   Node background fills (development & infrastructure)
-   ============================================================ */
 
 /* Specialist / Manager background colors (dev + infra only) */
 .career-node.track-development.path-specialist,
@@ -121,18 +110,22 @@ html, body, #root {
   background: var(--color-manager);
 }
 
-/* Common nodes (dev + infra) */
 .career-node.track-development.path-common,
 .career-node.track-infrastructure.path-common {
   background: var(--color-common);
 }
 
-/* 段階1 ノードは共通色（Specialist/Manager の中間） */
+/* Stage 1 background */
 .career-node.stage-1 {
   background: var(--color-stage1) !important;
   background-color: var(--color-stage1) !important;
 }
 
+/* Wider common node at stage 1 */
+.career-node.stage-1.path-common {
+  min-width: 196px;
+  max-width: 196px;
+}
 
 /* Selected node */
 .career-node.selected {
@@ -148,17 +141,14 @@ html, body, #root {
   box-shadow: 0 0 0 3px var(--color-its-ring), 0 4px 12px rgba(0,0,0,0.12);
 }
 
-/* Connected (highlighted) neighbor nodes */
 .career-node.connected {
   box-shadow: 0 0 0 2px #fbbf24, 0 2px 8px rgba(0,0,0,0.08);
 }
 
-/* Provisional / provisional style */
 .career-node.style-provisional {
   opacity: 0.9;
 }
 
-/* Stage badge */
 .career-node .stage-badge {
   display: inline-block;
   font-size: 10px;
@@ -181,7 +171,6 @@ html, body, #root {
   color: var(--color-its-ring);
 }
 
-/* Path type badge */
 .career-node .path-badge {
   display: inline-block;
   font-size: 9px;
@@ -194,8 +183,9 @@ html, body, #root {
 }
 
 /* ============================================================
-   Scrollbar styling (thin and subtle for wireframe)
+   Scrollbar styling
    ============================================================ */
+
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -211,8 +201,9 @@ html, body, #root {
 }
 
 /* ============================================================
-   Stage lane overlay labels (positioned in the flow background)
+   Stage lane overlay labels
    ============================================================ */
+
 .stage-lane-label {
   position: absolute;
   left: 8px;
@@ -232,9 +223,14 @@ html, body, #root {
   }
 
   .career-node {
-    min-width: 132px;
-    max-width: 168px;
+    min-width: 110px;
+    max-width: 148px;
     padding: 8px 10px;
     font-size: 11px;
+  }
+
+  .career-node.stage-1.path-common {
+    min-width: 160px;
+    max-width: 160px;
   }
 }

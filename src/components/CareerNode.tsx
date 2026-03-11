@@ -17,10 +17,6 @@ export interface CareerNodeData {
   [key: string]: unknown;
 }
 
-/**
- * Custom React Flow node for career path tiles.
- * Renders a compact card showing stage, label, and path type.
- */
 const CareerNodeComponent: React.FC<NodeProps> = ({ data }) => {
   const {
     shortLabel,
@@ -57,8 +53,8 @@ const CareerNodeComponent: React.FC<NodeProps> = ({ data }) => {
 
         {pathType === 'common' ? (
           <>
-            <span className="path-badge dual-specialist">{PATH_TYPE_LABELS.specialist}</span>
-            <span className="path-badge dual-manager">{PATH_TYPE_LABELS.manager}</span>
+            <span className="path-badge">{PATH_TYPE_LABELS.specialist}</span>
+            <span className="path-badge">{PATH_TYPE_LABELS.manager}</span>
           </>
         ) : (
           <span className="path-badge">{PATH_TYPE_LABELS[pathType as PathType]}</span>
