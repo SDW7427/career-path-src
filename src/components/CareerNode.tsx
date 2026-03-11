@@ -61,12 +61,12 @@ const CareerNodeComponent: React.FC<NodeProps> = ({ data }) => {
         )}
       </div>
 
-      <div className="font-semibold text-gray-800 leading-tight text-[13px] whitespace-nowrap">
+      <div className="node-title font-semibold text-gray-800 leading-tight text-[13px]">
         {shortLabel}
       </div>
 
       {subtrack && (
-        <div className="text-[10px] text-gray-400 mt-1 truncate">
+        <div className="node-subtrack text-[10px] text-gray-400 mt-1 truncate">
           {subtrack}
         </div>
       )}

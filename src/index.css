@@ -9,21 +9,20 @@
 
 :root {
   /* Track accent colors */
-  --color-dev: #3b82f6;          /* blue-500 */
-  --color-dev-light: #dbeafe;    /* blue-100 */
-  --color-dev-ring: #2563eb;     /* blue-600 */
+  --color-dev: #3b82f6;
+  --color-dev-light: #dbeafe;
+  --color-dev-ring: #2563eb;
 
-  --color-infra: #06b6d4;        /* cyan-500 */
-  --color-infra-light: #cffafe;  /* cyan-100 */
-  --color-infra-ring: #0891b2;   /* cyan-600 */
+  --color-infra: #06b6d4;
+  --color-infra-light: #cffafe;
+  --color-infra-ring: #0891b2;
 
-  --color-its: #8b5cf6;          /* violet-500 */
-  --color-its-light: #ede9fe;    /* violet-100 */
-  --color-its-ring: #7c3aed;     /* violet-600 */
+  --color-its: #8b5cf6;
+  --color-its-light: #ede9fe;
+  --color-its-ring: #7c3aed;
 
-  /* Path type fills (reference: original zip) */
-  --color-specialist: #f0f9ff;   /* sky-50 */
-  --color-manager: #fefce8;      /* yellow-50 */
+  --color-specialist: #f0f9ff;
+  --color-manager: #fefce8;
   --color-common: #ffffff;
   --color-stage1: #F7FBF4;
 }
@@ -99,7 +98,6 @@ html, body, #root {
   border-color: var(--color-its);
 }
 
-/* Specialist / Manager background colors (dev + infra only) */
 .career-node.track-development.path-specialist,
 .career-node.track-infrastructure.path-specialist {
   background: var(--color-specialist);
@@ -115,19 +113,11 @@ html, body, #root {
   background: var(--color-common);
 }
 
-/* Stage 1 background */
 .career-node.stage-1 {
   background: var(--color-stage1) !important;
   background-color: var(--color-stage1) !important;
 }
 
-/* Wider common node at stage 1 */
-.career-node.stage-1.path-common {
-  min-width: 196px;
-  max-width: 196px;
-}
-
-/* Selected node */
 .career-node.selected {
   box-shadow: 0 0 0 3px var(--color-dev-ring), 0 4px 12px rgba(0,0,0,0.12);
 }
@@ -182,6 +172,16 @@ html, body, #root {
   color: #64748b;
 }
 
+/* 공통 1단계 노드만 확장 */
+.career-node.stage-1.path-common {
+  min-width: 212px;
+  max-width: 212px;
+}
+
+.career-node.stage-1.path-common .node-title {
+  white-space: nowrap;
+}
+
 /* ============================================================
    Scrollbar styling
    ============================================================ */
@@ -215,7 +215,6 @@ html, body, #root {
   z-index: 0;
 }
 
-/* Small-screen refinements */
 @media (max-width: 768px) {
   html,
   body {
@@ -230,7 +229,7 @@ html, body, #root {
   }
 
   .career-node.stage-1.path-common {
-    min-width: 160px;
-    max-width: 160px;
+    min-width: 172px;
+    max-width: 172px;
   }
 }
