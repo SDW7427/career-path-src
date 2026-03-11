@@ -10,12 +10,10 @@ const stageY = (stage: number) => BASE_Y + (6 - stage) * STAGE_Y_GAP;
 
 const STAGES = [1, 2, 3, 4, 5, 6] as const;
 
-/** original normal node width */
 const DEFAULT_NODE_WIDTH = 140;
-/** widened common node width */
-const COMMON_NODE_WIDTH = 212;
-/** align widened stage-1 common node to the real center */
-const COMMON_X_OFFSET = Math.round((DEFAULT_NODE_WIDTH - COMMON_NODE_WIDTH) / 2);
+const COMMON_NODE_WIDTH = 220;
+/* 220으로 넓어진 만큼 왼쪽으로 보정 */
+const COMMON_X_OFFSET = Math.round((DEFAULT_NODE_WIDTH - COMMON_NODE_WIDTH) / 2) + 4;
 
 // Development
 const DEV_WEB_SP_X = 80;
