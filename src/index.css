@@ -1,86 +1,254 @@
-import React, { memo } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { STAGE_LABELS, PATH_TYPE_LABELS, type Stage, type PathType, type Track } from '../types/career';
+@import "tailwindcss";
 
-/** Data passed to each custom React Flow node */
-export interface CareerNodeData {
-  nodeId: string;
-  shortLabel: string;
-  titleJa: string;
-  stage: Stage;
-  pathType: PathType;
-  track: Track;
-  subtrack?: string;
-  styleKey?: string;
-  isSelected: boolean;
-  isConnected: boolean;
-  [key: string]: unknown;
+/* React Flow base styles */
+@import "@xyflow/react/dist/style.css";
+
+/* ============================================================
+   Global wireframe styles
+   ============================================================ */
+
+:root {
+  /* Track accent colors */
+  --color-dev: #3b82f6;          /* blue-500 */
+  --color-dev-light: #dbeafe;    /* blue-100 */
+  --color-dev-ring: #2563eb;     /* blue-600 */
+
+  --color-infra: #06b6d4;        /* cyan-500 */
+  --color-infra-light: #cffafe;  /* cyan-100 */
+  --color-infra-ring: #0891b2;   /* cyan-600 */
+
+  --color-its: #8b5cf6;          /* violet-500 */
+  --color-its-light: #ede9fe;    /* violet-100 */
+  --color-its-ring: #7c3aed;     /* violet-600 */
+
+  /* Path type fills */
+  --color-specialist: #f0f9ff;   /* sky-50 */
+  --color-manager: #fefce8;      /* yellow-50 */
+  --color-common: #ffffff;
+  --color-stage1: #F7FBF4;
 }
 
-/**
- * Custom React Flow node for career path tiles.
- * Renders a compact card showing stage, label, and path type.
- */
-const CareerNodeComponent: React.FC<NodeProps> = ({ data }) => {
-  const {
-    shortLabel,
-    stage,
-    pathType,
-    track,
-    subtrack,
-    styleKey,
-    isSelected,
-    isConnected,
-  } = data as unknown as CareerNodeData;
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+}
 
-  const classes = [
-    'career-node',
-    `track-${track}`,
-    `path-${pathType}`,
-    `stage-${stage}`,
-    isSelected ? 'selected' : '',
-    isConnected ? 'connected' : '',
-    styleKey ? `style-${styleKey}` : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
+/* ============================================================
+   React Flow customization
+   ============================================================ */
 
-  return (
-    <div className={classes}>
-      <Handle id="target-top" type="target" position={Position.Top} className="!w-2 !h-2 !bg-gray-300 !border-0" />
-      <Handle id="target-bottom" type="target" position={Position.Bottom} className="!w-2 !h-2 !bg-gray-300 !border-0" />
-      <Handle id="target-left" type="target" position={Position.Left} className="!w-2 !h-2 !bg-gray-300 !border-0" />
-      <Handle id="target-right" type="target" position={Position.Right} className="!w-2 !h-2 !bg-gray-300 !border-0" />
+.react-flow__pane {
+  background-color: #fafbfc !important;
+}
 
-      <div className="flex items-center gap-1 mb-1">
-        <span className="stage-badge">{STAGE_LABELS[stage as Stage]}</span>
+.react-flow__attribution {
+  display: none !important;
+}
 
-        {pathType === 'common' ? (
-          <>
-            <span className="path-badge">{PATH_TYPE_LABELS.specialist}</span>
-            <span className="path-badge">{PATH_TYPE_LABELS.manager}</span>
-          </>
-        ) : (
-          <span className="path-badge">{PATH_TYPE_LABELS[pathType as PathType]}</span>
-        )}
-      </div>
+.react-flow__edge-path {
+  stroke-width: 2;
+}
 
-      <div className="node-title font-semibold text-gray-800 leading-tight text-[13px]">
-        {shortLabel}
-      </div>
+.edge-normal .react-flow__edge-path {
+  stroke: #94a3b8;
+  stroke-width: 2;
+}
 
-      {subtrack && (
-        <div className="node-subtrack text-[10px] text-gray-400 mt-1 truncate">
-          {subtrack}
-        </div>
-      )}
+.edge-optional .react-flow__edge-path {
+  stroke: #94a3b8;
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
 
-      <Handle id="source-top" type="source" position={Position.Top} className="!w-2 !h-2 !bg-gray-300 !border-0" />
-      <Handle id="source-bottom" type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-gray-300 !border-0" />
-      <Handle id="source-left" type="source" position={Position.Left} className="!w-2 !h-2 !bg-gray-300 !border-0" />
-      <Handle id="source-right" type="source" position={Position.Right} className="!w-2 !h-2 !bg-gray-300 !border-0" />
-    </div>
-  );
-};
+.edge-cross-track .react-flow__edge-path {
+  stroke: #f59e0b;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
 
-export default memo(CareerNodeComponent);
+/* ============================================================
+   Custom node styles
+   ============================================================ */
+
+.career-node {
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+  padding: 10px 14px;
+  min-width: 140px;
+  max-width: 140px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 13px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.career-node:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+  transform: translateY(-1px);
+}
+
+/* Track-specific border colors */
+.career-node.track-development {
+  border-color: var(--color-dev);
+}
+
+.career-node.track-infrastructure {
+  border-color: var(--color-infra);
+}
+
+.career-node.track-it-support {
+  border-color: var(--color-its);
+}
+
+/* Specialist / Manager background colors (development + infrastructure) */
+.career-node.track-development.path-specialist,
+.career-node.track-infrastructure.path-specialist {
+  background: var(--color-specialist);
+}
+
+.career-node.track-development.path-manager,
+.career-node.track-infrastructure.path-manager {
+  background: var(--color-manager);
+}
+
+.career-node.track-development.path-common,
+.career-node.track-infrastructure.path-common {
+  background: var(--color-common);
+}
+
+/* Stage 1 nodes */
+.career-node.stage-1 {
+  background: var(--color-stage1) !important;
+  background-color: var(--color-stage1) !important;
+}
+
+/* Wider common node at stage 1 */
+.career-node.stage-1.path-common {
+  min-width: 212px;
+  max-width: 212px;
+}
+
+.career-node.stage-1.path-common .node-title {
+  white-space: nowrap;
+}
+
+/* Selected node */
+.career-node.selected {
+  box-shadow: 0 0 0 3px var(--color-dev-ring), 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.career-node.selected.track-development {
+  box-shadow: 0 0 0 3px var(--color-dev-ring), 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.career-node.selected.track-infrastructure {
+  box-shadow: 0 0 0 3px var(--color-infra-ring), 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.career-node.selected.track-it-support {
+  box-shadow: 0 0 0 3px var(--color-its-ring), 0 4px 12px rgba(0,0,0,0.12);
+}
+
+/* Connected neighbor nodes */
+.career-node.connected {
+  box-shadow: 0 0 0 2px #fbbf24, 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.career-node.style-provisional {
+  opacity: 0.9;
+}
+
+/* Stage badge */
+.career-node .stage-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.career-node.track-development .stage-badge {
+  background: var(--color-dev-light);
+  color: var(--color-dev-ring);
+}
+
+.career-node.track-infrastructure .stage-badge {
+  background: var(--color-infra-light);
+  color: var(--color-infra-ring);
+}
+
+.career-node.track-it-support .stage-badge {
+  background: var(--color-its-light);
+  color: var(--color-its-ring);
+}
+
+/* Path type badge */
+.career-node .path-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* ============================================================
+   Scrollbar styling
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ============================================================
+   Stage lane overlay labels
+   ============================================================ */
+
+.stage-lane-label {
+  position: absolute;
+  left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  writing-mode: horizontal-tb;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Small-screen refinements */
+@media (max-width: 768px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  .career-node {
+    min-width: 110px;
+    max-width: 148px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  .career-node.stage-1.path-common {
+    min-width: 172px;
+    max-width: 172px;
+  }
+}
