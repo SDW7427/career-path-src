@@ -13,14 +13,20 @@ const STAGES = [1, 2, 3, 4, 5, 6] as const;
 // Development
 const DEV_WEB_SP_X = 80;
 const DEV_WEB_MG_X = 260;
+const DEV_WEB_COMMON_X = Math.round((DEV_WEB_SP_X + DEV_WEB_MG_X) / 2);
+
 const DEV_MOBILE_SP_X = 500;
 const DEV_MOBILE_MG_X = 680;
+const DEV_MOBILE_COMMON_X = Math.round((DEV_MOBILE_SP_X + DEV_MOBILE_MG_X) / 2);
 
 // Infrastructure
 const INFRA_SERVER_SP_X = 80;
 const INFRA_SERVER_MG_X = 260;
+const INFRA_SERVER_COMMON_X = Math.round((INFRA_SERVER_SP_X + INFRA_SERVER_MG_X) / 2);
+
 const INFRA_NETWORK_SP_X = 500;
 const INFRA_NETWORK_MG_X = 680;
+const INFRA_NETWORK_COMMON_X = Math.round((INFRA_NETWORK_SP_X + INFRA_NETWORK_MG_X) / 2);
 
 // IT Support
 const ITS_IT_X = 100;
@@ -48,9 +54,9 @@ const DEV_COMMON_META: StageMeta = {
 
 const DEV_SP_META: Record<number, StageMeta> = {
   2: { titleJa: 'PG（プログラミング）', shortLabel: 'PG' },
-  3: { titleJa: 'SE（詳細設計）', shortLabel: 'SE(詳細)' },
-  4: { titleJa: 'SE（基本設計）', shortLabel: 'SE(基本)' },
-  5: { titleJa: 'SE（要件定義・基本構想）', shortLabel: 'SE(要件)' },
+  3: { titleJa: 'SE（詳細設計）', shortLabel: 'SE(詳細設計)' },
+  4: { titleJa: 'SE（基本設計）', shortLabel: 'SE(基本設計)' },
+  5: { titleJa: 'SE（要件定義）', shortLabel: 'SE(要件定義)' },
   6: { titleJa: 'TL（技術責任）', shortLabel: 'TL(技術責任)' },
 };
 
@@ -152,13 +158,14 @@ function buildDualPathTrack(args: {
   idPrefix: string;
   specialistX: number;
   managerX: number;
+  commonX: number;
   commonMeta: StageMeta;
   specialistMeta: Record<number, StageMeta>;
   managerMeta: Record<number, StageMeta>;
 }): CareerNode[] {
   const nodes: CareerNode[] = [];
 
-  // 段階1: 共通ノード
+  // Stage 1: one common node
   nodes.push(
     createNode({
       id: `${args.idPrefix}-common-1`,
@@ -166,12 +173,12 @@ function buildDualPathTrack(args: {
       subtrack: args.subtrack,
       stage: 1,
       pathType: 'common',
-      x: (args.specialistX + args.managerX) / 2,
+      x: args.commonX,
       meta: args.commonMeta,
     })
   );
 
-  // 段階2〜6: Specialist / Manager
+  // Stage 2-6: specialist / manager
   for (const stage of [2, 3, 4, 5, 6] as const) {
     nodes.push(
       createNode({
@@ -247,6 +254,7 @@ const developmentNodes: CareerNode[] = [
     idPrefix: 'dev-web',
     specialistX: DEV_WEB_SP_X,
     managerX: DEV_WEB_MG_X,
+    commonX: DEV_WEB_COMMON_X,
     commonMeta: DEV_COMMON_META,
     specialistMeta: DEV_SP_META,
     managerMeta: DEV_MG_META,
@@ -257,6 +265,7 @@ const developmentNodes: CareerNode[] = [
     idPrefix: 'dev-mobile',
     specialistX: DEV_MOBILE_SP_X,
     managerX: DEV_MOBILE_MG_X,
+    commonX: DEV_MOBILE_COMMON_X,
     commonMeta: DEV_COMMON_META,
     specialistMeta: DEV_SP_META,
     managerMeta: DEV_MG_META,
@@ -270,6 +279,7 @@ const infrastructureNodes: CareerNode[] = [
     idPrefix: 'infra-server',
     specialistX: INFRA_SERVER_SP_X,
     managerX: INFRA_SERVER_MG_X,
+    commonX: INFRA_SERVER_COMMON_X,
     commonMeta: INFRA_COMMON_META,
     specialistMeta: INFRA_SP_META,
     managerMeta: INFRA_MG_META,
@@ -280,6 +290,7 @@ const infrastructureNodes: CareerNode[] = [
     idPrefix: 'infra-network',
     specialistX: INFRA_NETWORK_SP_X,
     managerX: INFRA_NETWORK_MG_X,
+    commonX: INFRA_NETWORK_COMMON_X,
     commonMeta: INFRA_COMMON_META,
     specialistMeta: INFRA_SP_META,
     managerMeta: INFRA_MG_META,

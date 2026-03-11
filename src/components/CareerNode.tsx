@@ -37,6 +37,7 @@ const CareerNodeComponent: React.FC<NodeProps> = ({ data }) => {
     'career-node',
     `track-${track}`,
     `path-${pathType}`,
+    `stage-${stage}`,
     isSelected ? 'selected' : '',
     isConnected ? 'connected' : '',
     styleKey ? `style-${styleKey}` : '',
@@ -46,24 +47,28 @@ const CareerNodeComponent: React.FC<NodeProps> = ({ data }) => {
 
   return (
     <div className={classes}>
-      {/* Handles for edges */}
       <Handle id="target-top" type="target" position={Position.Top} className="!w-2 !h-2 !bg-gray-300 !border-0" />
       <Handle id="target-bottom" type="target" position={Position.Bottom} className="!w-2 !h-2 !bg-gray-300 !border-0" />
       <Handle id="target-left" type="target" position={Position.Left} className="!w-2 !h-2 !bg-gray-300 !border-0" />
       <Handle id="target-right" type="target" position={Position.Right} className="!w-2 !h-2 !bg-gray-300 !border-0" />
 
-      {/* Stage + path badges */}
-      <div className="flex items-center gap-1 mb-1">
+      <div className="flex items-center gap-1 mb-1 flex-wrap">
         <span className="stage-badge">{STAGE_LABELS[stage as Stage]}</span>
-        <span className="path-badge">{PATH_TYPE_LABELS[pathType as PathType]}</span>
+
+        {pathType === 'common' ? (
+          <>
+            <span className="path-badge dual-specialist">{PATH_TYPE_LABELS.specialist}</span>
+            <span className="path-badge dual-manager">{PATH_TYPE_LABELS.manager}</span>
+          </>
+        ) : (
+          <span className="path-badge">{PATH_TYPE_LABELS[pathType as PathType]}</span>
+        )}
       </div>
 
-      {/* Label */}
-      <div className="font-semibold text-gray-800 leading-tight text-[13px]">
+      <div className="font-semibold text-gray-800 leading-tight text-[13px] whitespace-nowrap">
         {shortLabel}
       </div>
 
-      {/* Subtrack tag */}
       {subtrack && (
         <div className="text-[10px] text-gray-400 mt-1 truncate">
           {subtrack}

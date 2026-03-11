@@ -81,8 +81,8 @@ html, body, #root {
   border-radius: 8px;
   border: 2px solid #e2e8f0;
   padding: 10px 14px;
-  min-width: 140px;
-  max-width: 140px;
+  min-width: 168px;
+  max-width: 168px;
   background: white;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -232,9 +232,19 @@ html, body, #root {
   }
 
   .career-node {
-    min-width: 110px;
-    max-width: 148px;
+    min-width: 132px;
+    max-width: 168px;
     padding: 8px 10px;
     font-size: 11px;
   }
+}
+
+.career-node .path-badge.dual-specialist {
+  background: #f0f9ff;
+  color: #0369a1;
+}
+
+.career-node .path-badge.dual-manager {
+  background: #fefce8;
+  color: #a16207;
 }
