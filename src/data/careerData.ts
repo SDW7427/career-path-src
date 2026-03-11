@@ -41,35 +41,41 @@ type StageMeta = {
   shortLabel: string;
 };
 
+const DEV_COMMON_META: StageMeta = {
+  titleJa: 'プログラム改修／テスト',
+  shortLabel: '改修/テスト',
+};
+
 const DEV_SP_META: Record<number, StageMeta> = {
-  1: { titleJa: 'プログラム改修／テスト', shortLabel: '改修/テスト' },
   2: { titleJa: 'PG（プログラミング）', shortLabel: 'PG' },
   3: { titleJa: 'SE（詳細設計）', shortLabel: 'SE(詳細)' },
   4: { titleJa: 'SE（基本設計）', shortLabel: 'SE(基本)' },
   5: { titleJa: 'SE（要件定義・基本構想）', shortLabel: 'SE(要件)' },
-  6: { titleJa: 'TL（テックリード／技術責任）', shortLabel: 'テックリード' },
+  6: { titleJa: 'TL（技術責任）', shortLabel: 'TL(技術責任)' },
 };
 
 const DEV_MG_META: Record<number, StageMeta> = {
-  1: { titleJa: '開発管理補助', shortLabel: '管理補助' },
   2: { titleJa: 'サブリーダー', shortLabel: 'サブリーダー' },
   3: { titleJa: 'リーダー', shortLabel: 'リーダー' },
   4: { titleJa: 'サブPL', shortLabel: 'サブPL' },
   5: { titleJa: 'PL／サブPM', shortLabel: 'PL/サブPM' },
-  6: { titleJa: 'PM／開発マネージャ', shortLabel: 'PM/開発Mgr' },
+  6: { titleJa: 'PM', shortLabel: 'PM' },
+};
+
+const INFRA_COMMON_META: StageMeta = {
+  titleJa: '運用監視補助・ヘルプデスク',
+  shortLabel: '運用監視補助/HD',
 };
 
 const INFRA_SP_META: Record<number, StageMeta> = {
-  1: { titleJa: '運用監視補助・ヘルプデスク', shortLabel: '運用監視補助/HD' },
   2: { titleJa: '運用監視', shortLabel: '運用監視' },
   3: { titleJa: '運用保守', shortLabel: '運用保守' },
-  4: { titleJa: '構築・設定', shortLabel: '構築/設定' },
+  4: { titleJa: '構築・設定', shortLabel: '構築・設定' },
   5: { titleJa: 'システム設計', shortLabel: 'システム設計' },
-  6: { titleJa: 'TL（テックリード／技術責任）', shortLabel: 'テックリード' },
+  6: { titleJa: 'TL（技術責任）', shortLabel: 'TL(技術責任)' },
 };
 
 const INFRA_MG_META: Record<number, StageMeta> = {
-  1: { titleJa: 'インフラ管理補助', shortLabel: '管理補助' },
   2: { titleJa: 'サブリーダー', shortLabel: 'サブリーダー' },
   3: { titleJa: 'リーダー', shortLabel: 'リーダー' },
   4: { titleJa: 'サブPM', shortLabel: 'サブPM' },
@@ -146,12 +152,27 @@ function buildDualPathTrack(args: {
   idPrefix: string;
   specialistX: number;
   managerX: number;
+  commonMeta: StageMeta;
   specialistMeta: Record<number, StageMeta>;
   managerMeta: Record<number, StageMeta>;
 }): CareerNode[] {
   const nodes: CareerNode[] = [];
 
-  for (const stage of STAGES) {
+  // 段階1: 共通ノード
+  nodes.push(
+    createNode({
+      id: `${args.idPrefix}-common-1`,
+      track: args.track,
+      subtrack: args.subtrack,
+      stage: 1,
+      pathType: 'common',
+      x: (args.specialistX + args.managerX) / 2,
+      meta: args.commonMeta,
+    })
+  );
+
+  // 段階2〜6: Specialist / Manager
+  for (const stage of [2, 3, 4, 5, 6] as const) {
     nodes.push(
       createNode({
         id: `${args.idPrefix}-sp-${stage}`,
@@ -193,7 +214,7 @@ function buildSingleLaneTrack(args: {
   for (const stage of STAGES) {
     const relatedNodeIds =
       args.idPrefix === 'its-it-cm' && stage === 1
-        ? ['infra-server-sp-1', 'infra-network-sp-1']
+        ? ['infra-server-common-1', 'infra-network-common-1']
         : args.idPrefix === 'its-josis-cm' && stage === 1
           ? ['its-it-cm-1']
           : undefined;
@@ -226,6 +247,7 @@ const developmentNodes: CareerNode[] = [
     idPrefix: 'dev-web',
     specialistX: DEV_WEB_SP_X,
     managerX: DEV_WEB_MG_X,
+    commonMeta: DEV_COMMON_META,
     specialistMeta: DEV_SP_META,
     managerMeta: DEV_MG_META,
   }),
@@ -235,6 +257,7 @@ const developmentNodes: CareerNode[] = [
     idPrefix: 'dev-mobile',
     specialistX: DEV_MOBILE_SP_X,
     managerX: DEV_MOBILE_MG_X,
+    commonMeta: DEV_COMMON_META,
     specialistMeta: DEV_SP_META,
     managerMeta: DEV_MG_META,
   }),
@@ -247,6 +270,7 @@ const infrastructureNodes: CareerNode[] = [
     idPrefix: 'infra-server',
     specialistX: INFRA_SERVER_SP_X,
     managerX: INFRA_SERVER_MG_X,
+    commonMeta: INFRA_COMMON_META,
     specialistMeta: INFRA_SP_META,
     managerMeta: INFRA_MG_META,
   }),
@@ -256,6 +280,7 @@ const infrastructureNodes: CareerNode[] = [
     idPrefix: 'infra-network',
     specialistX: INFRA_NETWORK_SP_X,
     managerX: INFRA_NETWORK_MG_X,
+    commonMeta: INFRA_COMMON_META,
     specialistMeta: INFRA_SP_META,
     managerMeta: INFRA_MG_META,
   }),
@@ -299,9 +324,12 @@ export const allNodes: CareerNode[] = [
 // ---------------------------------------------------------------------------
 
 function buildDualPathProgressionEdges(prefix: string): CareerEdge[] {
-  const edges: CareerEdge[] = [];
+  const edges: CareerEdge[] = [
+    { source: `${prefix}-common-1`, target: `${prefix}-sp-2`, type: 'normal' },
+    { source: `${prefix}-common-1`, target: `${prefix}-mg-2`, type: 'normal' },
+  ];
 
-  for (let stage = 1; stage < 6; stage += 1) {
+  for (let stage = 2; stage < 6; stage += 1) {
     edges.push(
       {
         source: `${prefix}-sp-${stage}`,
@@ -396,9 +424,7 @@ export function getNodesByTrack(track: Track): CareerNode[] {
  * Helper: Get edges relevant to a set of node IDs
  */
 export function getEdgesForNodes(nodeIds: Set<string>): CareerEdge[] {
-  return allEdges.filter(
-    (e) => nodeIds.has(e.source) || nodeIds.has(e.target)
-  );
+  return allEdges.filter((e) => nodeIds.has(e.source) || nodeIds.has(e.target));
 }
 
 /**
