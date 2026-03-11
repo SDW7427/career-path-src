@@ -77,8 +77,6 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
       const hasSpecialistOrManager =
         filterTypes.has('specialist') || filterTypes.has('manager');
 
-      // 「Specialist」または「Manager」を選んだ場合は、共通ノードも一緒に表示する
-      // （共通ノードがないと経路が途切れて見えるため）
       nodes = nodes.filter((n) => {
         if (filterTypes.has(n.pathType)) return true;
         if (n.pathType === 'common' && hasSpecialistOrManager) return true;

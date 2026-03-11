@@ -70,9 +70,6 @@ const App: React.FC = () => {
     }
   }, [selectedNode]);
 
-  // Decide whether to show the mobile tutorial AFTER data is loaded.
-  // (If we check on mount, the UI might still be in loading skeleton state and the
-  // tutorial can be missed or never rendered.)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (loading) return;
@@ -137,7 +134,7 @@ const App: React.FC = () => {
               {loadError}
             </p>
             <p className="mt-3 text-xs leading-relaxed text-gray-500">
-              シートの公開設定、列名、ノードID／エッジ参照、座標値を確認してください。
+              シートの公開設定、列名、ノードIDを確認してください。
             </p>
           </div>
           <button

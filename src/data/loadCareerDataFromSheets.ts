@@ -3,7 +3,7 @@ import { SHEET_SOURCES } from './sheetSources';
 import { csvToObjects, parseCsv } from '../utils/csv';
 import { allEdges as fallbackEdges, allNodes as fallbackNodes } from './careerData';
 
-const REQUIRED_HEADERS = ['id', 'titleJa', 'shortLabel'] as const;
+const REQUIRED_NODE_HEADERS = ['id', 'titleJa', 'shortLabel'] as const;
 const HTML_RESPONSE_RE = /^\s*<(?:!doctype html|html|head|body)\b/i;
 
 class SheetDataError extends Error {
@@ -16,7 +16,7 @@ class SheetDataError extends Error {
   }
 }
 
-function formatIssues(issues: string[], limit = 20): string[] {
+function formatIssues(issues: string[], limit = 15): string[] {
   if (issues.length <= limit) return issues;
   const omitted = issues.length - limit;
   return [...issues.slice(0, limit), `…and ${omitted} more issue(s).`];
@@ -37,7 +37,6 @@ function splitList(v: string): string[] {
 
   const out: string[] = [];
   const lines = s.split('\n');
-
   for (const rawLine of lines) {
     const line = (rawLine ?? '').trim();
     if (!line) continue;
@@ -51,13 +50,34 @@ function splitList(v: string): string[] {
       out.push(part);
     }
   }
-
   return out;
 }
 
 function withCacheBust(url: string): string {
   const sep = url.includes('?') ? '&' : '?';
   return `${url}${sep}t=${Date.now()}`;
+}
+
+function validateRequiredHeaders(
+  csvText: string,
+  requiredHeaders: readonly string[],
+  sheetLabel: string
+): Record<string, string>[] {
+  const rows = parseCsv(csvText);
+  if (rows.length === 0) {
+    throw new SheetDataError(`${sheetLabel} is empty.`);
+  }
+
+  const actualHeaders = rows[0].map((h) => h.trim());
+  const missingHeaders = requiredHeaders.filter((header) => !actualHeaders.includes(header));
+  if (missingHeaders.length > 0) {
+    throw new SheetDataError(
+      `${sheetLabel} is missing required column(s): ${missingHeaders.join(', ')}`,
+      [`Available columns: ${actualHeaders.join(', ') || '(none)'}`]
+    );
+  }
+
+  return csvToObjects(csvText);
 }
 
 async function fetchSheetCsv(url: string, sheetLabel: string): Promise<string> {
@@ -79,7 +99,6 @@ async function fetchSheetCsv(url: string, sheetLabel: string): Promise<string> {
   }
 
   const text = await response.text();
-
   if (!text.trim()) {
     throw new SheetDataError(`${sheetLabel} returned an empty response.`);
   }
@@ -101,62 +120,20 @@ async function fetchSheetCsv(url: string, sheetLabel: string): Promise<string> {
   return text;
 }
 
-function validateRequiredHeaders(
-  csvText: string,
-  requiredHeaders: readonly string[],
-  sheetLabel: string
-): Record<string, string>[] {
-  const rows = parseCsv(csvText);
-
-  if (rows.length === 0) {
-    throw new SheetDataError(`${sheetLabel} is empty.`);
-  }
-
-  const actualHeaders = rows[0].map((h) => h.trim());
-  const missingHeaders = requiredHeaders.filter((header) => !actualHeaders.includes(header));
-
-  if (missingHeaders.length > 0) {
-    throw new SheetDataError(
-      `${sheetLabel} is missing required column(s): ${missingHeaders.join(', ')}`,
-      [`Available columns: ${actualHeaders.join(', ') || '(none)'}`]
-    );
-  }
-
-  return csvToObjects(csvText);
-}
-
-type SheetContentRow = {
-  id: string;
-  titleJa: string;
-  shortLabel: string;
-  summary: string;
-  requiredSkills: string[];
-  requiredExperience: string[];
-  recommendedCerts: string[];
-  toolsEnvironmentsLanguages: string[];
-  nextStepConditions: string[];
-  tags: string[];
-  branchNote?: string;
-};
-
-function parseContentRows(rows: Record<string, string>[]): SheetContentRow[] {
+function parseSheetContentRows(nodeRows: Record<string, string>[]): CareerNode[] {
   const issues: string[] = [];
-  const parsed: SheetContentRow[] = [];
+  const nodes: CareerNode[] = [];
   const seenIds = new Set<string>();
 
-  rows.forEach((row, index) => {
+  nodeRows.forEach((row, index) => {
     const rowNumber = index + 2;
     const prefix = `Nodes row ${rowNumber}`;
-
-    const hasAnyValue = Object.values(row).some((value) => (value ?? '').trim() !== '');
-    if (!hasAnyValue) return;
 
     const id = (row.id ?? '').trim();
     if (!id) {
       issues.push(`${prefix}: id is required.`);
       return;
     }
-
     if (seenIds.has(id)) {
       issues.push(`${prefix}: duplicate id "${id}".`);
       return;
@@ -164,21 +141,24 @@ function parseContentRows(rows: Record<string, string>[]): SheetContentRow[] {
 
     const titleJa = (row.titleJa ?? '').trim();
     const shortLabel = (row.shortLabel ?? '').trim();
-
     if (!titleJa) {
       issues.push(`${prefix} (${id}): titleJa is required.`);
       return;
     }
-
     if (!shortLabel) {
       issues.push(`${prefix} (${id}): shortLabel is required.`);
       return;
     }
 
-    seenIds.add(id);
+    const baseNode = fallbackNodes.find((node) => node.id === id);
+    if (!baseNode) {
+      issues.push(`${prefix}: unmapped node id "${id}". This id does not exist in local careerData.ts.`);
+      return;
+    }
 
-    parsed.push({
-      id,
+    seenIds.add(id);
+    nodes.push({
+      ...baseNode,
       titleJa,
       shortLabel,
       summary: (row.summary ?? '').trim(),
@@ -188,73 +168,34 @@ function parseContentRows(rows: Record<string, string>[]): SheetContentRow[] {
       toolsEnvironmentsLanguages: splitList(row.toolsEnvironmentsLanguages),
       nextStepConditions: splitList(row.nextStepConditions),
       tags: splitList(row.tags),
+      canCoexistWith: splitList(row.canCoexistWith),
+      relatedNodeIds: splitList(row.relatedNodeIds),
       branchNote: (row.branchNote ?? '').trim() || undefined,
+      styleKey: (row.styleKey ?? '').trim() || undefined,
     });
   });
 
-  if (parsed.length === 0) {
-    issues.push('Nodes sheet did not contain any valid content rows.');
-  }
+  const fallbackIds = new Set(fallbackNodes.map((node) => node.id));
+  fallbackIds.forEach((id) => {
+    if (!seenIds.has(id)) {
+      issues.push(`Nodes sheet is missing required node id "${id}".`);
+    }
+  });
 
   if (issues.length > 0) {
     throw new SheetDataError('Nodes sheet validation failed.', formatIssues(issues));
   }
 
-  return parsed;
-}
-
-function mergeSheetContentIntoFallback(contentRows: SheetContentRow[]): CareerNode[] {
-  const issues: string[] = [];
-  const contentById = new Map(contentRows.map((row) => [row.id, row]));
-  const fallbackIds = new Set(fallbackNodes.map((node) => node.id));
-
-  for (const fallbackNode of fallbackNodes) {
-    if (!contentById.has(fallbackNode.id)) {
-      issues.push(`Nodes sheet is missing required node id "${fallbackNode.id}".`);
-    }
-  }
-
-  for (const row of contentRows) {
-    if (!fallbackIds.has(row.id)) {
-      issues.push(`Nodes sheet contains unknown node id "${row.id}".`);
-    }
-  }
-
-  if (issues.length > 0) {
-    throw new SheetDataError(
-      'Nodes sheet and local node definition are out of sync.',
-      formatIssues(issues)
-    );
-  }
-
-  return fallbackNodes.map((fallbackNode) => {
-    const content = contentById.get(fallbackNode.id);
-    if (!content) return fallbackNode;
-
-    return {
-      ...fallbackNode,
-      titleJa: content.titleJa,
-      shortLabel: content.shortLabel,
-      summary: content.summary,
-      requiredSkills: content.requiredSkills,
-      requiredExperience: content.requiredExperience,
-      recommendedCerts: content.recommendedCerts,
-      toolsEnvironmentsLanguages: content.toolsEnvironmentsLanguages,
-      nextStepConditions: content.nextStepConditions,
-      tags: content.tags,
-      branchNote: content.branchNote,
-    };
-  });
+  return nodes;
 }
 
 export async function loadCareerDataFromSheets(): Promise<CareerDataSet> {
   const nodesCsv = await fetchSheetCsv(SHEET_SOURCES.nodesCsvUrl, 'Nodes sheet');
-  const nodeRows = validateRequiredHeaders(nodesCsv, REQUIRED_HEADERS, 'Nodes sheet');
-  const contentRows = parseContentRows(nodeRows);
-  const mergedNodes = mergeSheetContentIntoFallback(contentRows);
+  const nodeRows = validateRequiredHeaders(nodesCsv, REQUIRED_NODE_HEADERS, 'Nodes sheet');
+  const nodes = parseSheetContentRows(nodeRows);
 
   return {
-    nodes: mergedNodes,
+    nodes,
     edges: fallbackEdges,
   };
 }
