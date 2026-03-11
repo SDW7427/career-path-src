@@ -12,8 +12,8 @@ const STAGES = [1, 2, 3, 4, 5, 6] as const;
 
 const DEFAULT_NODE_WIDTH = 140;
 const COMMON_NODE_WIDTH = 220;
-/* 220으로 넓어진 만큼 왼쪽으로 보정 */
-const COMMON_X_OFFSET = Math.round((DEFAULT_NODE_WIDTH - COMMON_NODE_WIDTH) / 2) + 4;
+/** 공통 노드를 시각적 중앙에 맞추기 위한 left offset */
+const COMMON_X_OFFSET = Math.round((DEFAULT_NODE_WIDTH - COMMON_NODE_WIDTH) / 2);
 
 // Development
 const DEV_WEB_SP_X = 80;

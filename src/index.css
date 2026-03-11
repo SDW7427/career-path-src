@@ -124,17 +124,23 @@ html, body, #root {
   background-color: var(--color-stage1) !important;
 }
 
-/* Wider common node at stage 1 */
+/* 공통 1단계 노드만 확장 */
 .career-node.stage-1.path-common {
-  min-width: 212px;
-  max-width: 212px;
+  min-width: 220px;
+  max-width: 220px;
 }
 
+/* 공통 1단계는 배지/제목 줄바꿈 방지 */
+.career-node.stage-1.path-common > .flex {
+  flex-wrap: nowrap;
+}
+
+.career-node.stage-1.path-common .stage-badge,
+.career-node.stage-1.path-common .path-badge,
 .career-node.stage-1.path-common .node-title {
   white-space: nowrap;
 }
 
-/* Selected node */
 .career-node.selected {
   box-shadow: 0 0 0 3px var(--color-dev-ring), 0 4px 12px rgba(0,0,0,0.12);
 }
@@ -247,8 +253,9 @@ html, body, #root {
     font-size: 11px;
   }
 
+  /* 모바일도 공통 1단계 폭을 PC와 동일하게 유지 */
   .career-node.stage-1.path-common {
-    min-width: 172px;
-    max-width: 172px;
+    min-width: 220px;
+    max-width: 220px;
   }
 }
