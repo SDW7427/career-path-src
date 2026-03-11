@@ -1,10 +1,9 @@
-import type { CareerDataSet, CareerEdge, CareerNode, EdgeType, Stage } from '../types/career';
+import type { CareerDataSet, CareerNode, Stage } from '../types/career';
 import { SHEET_SOURCES } from './sheetSources';
 import { csvToObjects, parseCsv } from '../utils/csv';
+import { allEdges as fallbackEdges, allNodes as fallbackNodes } from './careerData';
 
 const REQUIRED_NODE_HEADERS = ['id', 'track', 'pathType', 'stage', 'position_x', 'position_y'] as const;
-const REQUIRED_EDGE_HEADERS = ['source', 'target'] as const;
-const ALLOWED_EDGE_TYPES: ReadonlySet<EdgeType> = new Set(['normal', 'optional', 'cross-track']);
 const HTML_RESPONSE_RE = /^\s*<(?:!doctype html|html|head|body)\b/i;
 
 class SheetDataError extends Error {
@@ -42,7 +41,6 @@ function splitList(v: string): string[] {
     const line = (rawLine ?? '').trim();
     if (!line) continue;
 
-    // Allow both "|" and newlines as separators.
     const parts = line.split('|');
     for (let part of parts) {
       part = (part ?? '').trim();
@@ -73,12 +71,6 @@ function normalizePathType(v: string): CareerNode['pathType'] | null {
   if (s === '管理' || s === 'マネージャー') return 'manager';
   if (s === '共通') return 'common';
   return null;
-}
-
-function normalizeEdgeType(v: string): EdgeType | null {
-  const s = (v ?? '').trim();
-  if (!s) return 'normal';
-  return ALLOWED_EDGE_TYPES.has(s as EdgeType) ? (s as EdgeType) : null;
 }
 
 function parseStageStrict(v: string): Stage | null {
@@ -254,71 +246,61 @@ function parseNodes(nodeRows: Record<string, string>[]): CareerNode[] {
   return nodes;
 }
 
-function parseEdges(edgeRows: Record<string, string>[], nodeIds: Set<string>): CareerEdge[] {
+function mergeSheetContentAndLayoutIntoFallback(sheetNodes: CareerNode[]): CareerNode[] {
+  const sheetNodeById = new Map(sheetNodes.map((node) => [node.id, node]));
   const issues: string[] = [];
-  const edges: CareerEdge[] = [];
-  const seenEdges = new Set<string>();
 
-  edgeRows.forEach((row, index) => {
-    const rowNumber = index + 2;
-    const prefix = `Edges row ${rowNumber}`;
-
-    const source = (row.source ?? '').trim();
-    const target = (row.target ?? '').trim();
-    if (!source || !target) {
-      issues.push(`${prefix}: source and target are required.`);
-      return;
+  for (const fallbackNode of fallbackNodes) {
+    if (!sheetNodeById.has(fallbackNode.id)) {
+      issues.push(`Nodes sheet is missing required node id "${fallbackNode.id}".`);
     }
-
-    const edgeKey = `${source}=>${target}`;
-    if (seenEdges.has(edgeKey)) {
-      issues.push(`${prefix}: duplicate edge "${edgeKey}".`);
-      return;
-    }
-
-    const type = normalizeEdgeType(row.type);
-    if (!type) {
-      issues.push(`${prefix} (${edgeKey}): invalid edge type "${row.type ?? ''}".`);
-      return;
-    }
-
-    if (!nodeIds.has(source)) {
-      issues.push(`${prefix} (${edgeKey}): source node "${source}" does not exist in nodes sheet.`);
-      return;
-    }
-    if (!nodeIds.has(target)) {
-      issues.push(`${prefix} (${edgeKey}): target node "${target}" does not exist in nodes sheet.`);
-      return;
-    }
-
-    seenEdges.add(edgeKey);
-    edges.push({
-      source,
-      target,
-      type,
-      label: (row.label ?? '').trim() || undefined,
-    });
-  });
-
-  if (issues.length > 0) {
-    throw new SheetDataError('Edges sheet validation failed.', formatIssues(issues));
   }
 
-  return edges;
+  for (const sheetNode of sheetNodes) {
+    if (!fallbackNodes.some((fallbackNode) => fallbackNode.id === sheetNode.id)) {
+      issues.push(`Nodes sheet contains unmapped node id "${sheetNode.id}" that does not exist in careerData.ts.`);
+    }
+  }
+
+  if (issues.length > 0) {
+    throw new SheetDataError(
+      'Nodes sheet and local layout definition are out of sync.',
+      formatIssues(issues)
+    );
+  }
+
+  return fallbackNodes.map((fallbackNode) => {
+    const sourceNode = sheetNodeById.get(fallbackNode.id);
+    if (!sourceNode) return fallbackNode;
+
+    return {
+      ...fallbackNode,
+      titleJa: sourceNode.titleJa,
+      shortLabel: sourceNode.shortLabel,
+      summary: sourceNode.summary,
+      requiredSkills: sourceNode.requiredSkills,
+      requiredExperience: sourceNode.requiredExperience,
+      recommendedCerts: sourceNode.recommendedCerts,
+      toolsEnvironmentsLanguages: sourceNode.toolsEnvironmentsLanguages,
+      nextStepConditions: sourceNode.nextStepConditions,
+      tags: sourceNode.tags,
+      canCoexistWith: sourceNode.canCoexistWith,
+      relatedNodeIds: sourceNode.relatedNodeIds,
+      branchNote: sourceNode.branchNote,
+      styleKey: sourceNode.styleKey,
+      position: sourceNode.position,
+    };
+  });
 }
 
 export async function loadCareerDataFromSheets(): Promise<CareerDataSet> {
-  const [nodesCsv, edgesCsv] = await Promise.all([
-    fetchSheetCsv(SHEET_SOURCES.nodesCsvUrl, 'Nodes sheet'),
-    fetchSheetCsv(SHEET_SOURCES.edgesCsvUrl, 'Edges sheet'),
-  ]);
-
+  const nodesCsv = await fetchSheetCsv(SHEET_SOURCES.nodesCsvUrl, 'Nodes sheet');
   const nodeRows = validateRequiredHeaders(nodesCsv, REQUIRED_NODE_HEADERS, 'Nodes sheet');
-  const edgeRows = validateRequiredHeaders(edgesCsv, REQUIRED_EDGE_HEADERS, 'Edges sheet');
+  const sheetNodes = parseNodes(nodeRows);
+  const mergedNodes = mergeSheetContentAndLayoutIntoFallback(sheetNodes);
 
-  const nodes = parseNodes(nodeRows);
-  const nodeIds = new Set(nodes.map((node) => node.id));
-  const edges = parseEdges(edgeRows, nodeIds);
-
-  return { nodes, edges };
+  return {
+    nodes: mergedNodes,
+    edges: fallbackEdges,
+  };
 }
