@@ -1,7 +1,27 @@
-import type { CareerDataSet, CareerEdge, CareerNode, Stage } from '../types/career';
+import type { CareerDataSet, CareerEdge, CareerNode, EdgeType, Stage } from '../types/career';
 import { SHEET_SOURCES } from './sheetSources';
-import { csvToObjects } from '../utils/csv';
-import { allEdges as fallbackEdges, allNodes as fallbackNodes } from './careerData';
+import { csvToObjects, parseCsv } from '../utils/csv';
+
+const REQUIRED_NODE_HEADERS = ['id', 'track', 'pathType', 'stage', 'position_x', 'position_y'] as const;
+const REQUIRED_EDGE_HEADERS = ['source', 'target'] as const;
+const ALLOWED_EDGE_TYPES: ReadonlySet<EdgeType> = new Set(['normal', 'optional', 'cross-track']);
+const HTML_RESPONSE_RE = /^\s*<(?:!doctype html|html|head|body)\b/i;
+
+class SheetDataError extends Error {
+  readonly details: string[];
+
+  constructor(message: string, details: string[] = []) {
+    super([message, ...details].join('\n'));
+    this.name = 'SheetDataError';
+    this.details = details;
+  }
+}
+
+function formatIssues(issues: string[], limit = 15): string[] {
+  if (issues.length <= limit) return issues;
+  const omitted = issues.length - limit;
+  return [...issues.slice(0, limit), `…and ${omitted} more issue(s).`];
+}
 
 /**
  * Split a cell value into a string list.
@@ -35,40 +55,44 @@ function splitList(v: string): string[] {
   return out;
 }
 
-function toNumber(v: string): number | undefined {
-  const n = Number((v ?? '').trim());
-  return Number.isFinite(n) ? n : undefined;
-}
-
-function toStage(v: string): Stage {
-  const s = (v ?? '').trim();
-  // Accept values like "6", "G6", "段階6" etc.
-  const m = s.match(/[1-6]/);
-  if (m) return Number(m[0]) as Stage;
-  return 1;
-}
-
-function normalizeTrack(v: string): CareerNode['track'] {
+function normalizeTrack(v: string): CareerNode['track'] | null {
   const s = (v ?? '').trim();
   if (s === 'development' || s === 'infrastructure' || s === 'it-support') return s;
-  // Allow Japanese labels in sheets
   if (s === '開発') return 'development';
   if (s === 'インフラ') return 'infrastructure';
   if (s === 'ITサポート') return 'it-support';
-  // Fallback
-  return 'development';
+  return null;
 }
 
-function normalizePathType(v: string): CareerNode['pathType'] {
+function normalizePathType(v: string): CareerNode['pathType'] | null {
   const s = (v ?? '').trim().toLowerCase();
-  if (s === 'specialist' || s === 'manager' || s === 'common') return s as CareerNode['pathType'];
-  // Allow common variants
+  if (s === 'specialist' || s === 'manager' || s === 'common') return s;
   if (s === 'sp') return 'specialist';
   if (s === 'mg') return 'manager';
   if (s === '特化' || s === 'スペシャリスト') return 'specialist';
   if (s === '管理' || s === 'マネージャー') return 'manager';
   if (s === '共通') return 'common';
-  return 'common';
+  return null;
+}
+
+function normalizeEdgeType(v: string): EdgeType | null {
+  const s = (v ?? '').trim();
+  if (!s) return 'normal';
+  return ALLOWED_EDGE_TYPES.has(s as EdgeType) ? (s as EdgeType) : null;
+}
+
+function parseStageStrict(v: string): Stage | null {
+  const s = (v ?? '').trim();
+  const m = s.match(/[1-6]/);
+  if (!m) return null;
+  return Number(m[0]) as Stage;
+}
+
+function parseNumberStrict(v: string): number | null {
+  const trimmed = (v ?? '').trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : null;
 }
 
 function withCacheBust(url: string): string {
@@ -76,92 +100,225 @@ function withCacheBust(url: string): string {
   return `${url}${sep}t=${Date.now()}`;
 }
 
-function toLegacyTemplateId(nodeId: string): string {
-  if (nodeId.startsWith('dev-web-')) return nodeId.replace('dev-web-', 'dev-');
-  if (nodeId.startsWith('dev-mobile-')) return nodeId.replace('dev-mobile-', 'dev-');
-  if (nodeId.startsWith('infra-server-')) return nodeId.replace('infra-server-', 'infra-');
-  if (nodeId.startsWith('infra-network-')) return nodeId.replace('infra-network-', 'infra-');
-  return nodeId;
+function validateRequiredHeaders(
+  csvText: string,
+  requiredHeaders: readonly string[],
+  sheetLabel: string
+): Record<string, string>[] {
+  const rows = parseCsv(csvText);
+  if (rows.length === 0) {
+    throw new SheetDataError(`${sheetLabel} is empty.`);
+  }
+
+  const actualHeaders = rows[0].map((h) => h.trim());
+  const missingHeaders = requiredHeaders.filter((header) => !actualHeaders.includes(header));
+  if (missingHeaders.length > 0) {
+    throw new SheetDataError(
+      `${sheetLabel} is missing required column(s): ${missingHeaders.join(', ')}`,
+      [`Available columns: ${actualHeaders.join(', ') || '(none)'}`]
+    );
+  }
+
+  return csvToObjects(csvText);
 }
 
-function mergeSheetContentIntoFallback(sheetNodes: CareerNode[]): CareerNode[] {
-  const nodeById = new Map(sheetNodes.map((node) => [node.id, node]));
+async function fetchSheetCsv(url: string, sheetLabel: string): Promise<string> {
+  let response: Response;
 
-  return fallbackNodes.map((fallbackNode) => {
-    const sourceNode =
-      nodeById.get(fallbackNode.id) ?? nodeById.get(toLegacyTemplateId(fallbackNode.id));
+  try {
+    response = await fetch(withCacheBust(url), { cache: 'no-store' });
+  } catch (error) {
+    throw new SheetDataError(
+      `Failed to fetch ${sheetLabel}. Please check your network and the Google Sheets publish settings.`,
+      [error instanceof Error ? error.message : String(error)]
+    );
+  }
 
-    if (!sourceNode) return fallbackNode;
+  if (!response.ok) {
+    throw new SheetDataError(
+      `Failed to fetch ${sheetLabel}. HTTP ${response.status} ${response.statusText}`
+    );
+  }
 
-    return {
-      ...fallbackNode,
-      titleJa: sourceNode.titleJa,
-      shortLabel: sourceNode.shortLabel,
-      summary: sourceNode.summary,
-      requiredSkills: sourceNode.requiredSkills,
-      requiredExperience: sourceNode.requiredExperience,
-      recommendedCerts: sourceNode.recommendedCerts,
-      toolsEnvironmentsLanguages: sourceNode.toolsEnvironmentsLanguages,
-      nextStepConditions: sourceNode.nextStepConditions,
-      tags: sourceNode.tags,
-      styleKey: sourceNode.styleKey,
-      branchNote: sourceNode.branchNote,
-    };
+  const text = await response.text();
+  if (!text.trim()) {
+    throw new SheetDataError(`${sheetLabel} returned an empty response.`);
+  }
+
+  const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
+  if (HTML_RESPONSE_RE.test(text)) {
+    throw new SheetDataError(
+      `${sheetLabel} returned HTML instead of CSV. The sheet may not be published correctly.`
+    );
+  }
+
+  const looksLikeCsv = contentType.includes('csv') || text.includes(',') || text.includes('\n');
+  if (!looksLikeCsv) {
+    throw new SheetDataError(
+      `${sheetLabel} did not look like CSV data. Received content-type: ${contentType || '(unknown)'}`
+    );
+  }
+
+  return text;
+}
+
+function parseNodes(nodeRows: Record<string, string>[]): CareerNode[] {
+  const issues: string[] = [];
+  const nodes: CareerNode[] = [];
+  const seenIds = new Set<string>();
+
+  nodeRows.forEach((row, index) => {
+    const rowNumber = index + 2;
+    const prefix = `Nodes row ${rowNumber}`;
+
+    const id = (row.id ?? '').trim();
+    if (!id) {
+      issues.push(`${prefix}: id is required.`);
+      return;
+    }
+    if (seenIds.has(id)) {
+      issues.push(`${prefix}: duplicate id "${id}".`);
+      return;
+    }
+
+    const track = normalizeTrack(row.track);
+    if (!track) {
+      issues.push(`${prefix} (${id}): invalid track "${row.track ?? ''}".`);
+      return;
+    }
+
+    const pathType = normalizePathType(row.pathType);
+    if (!pathType) {
+      issues.push(`${prefix} (${id}): invalid pathType "${row.pathType ?? ''}".`);
+      return;
+    }
+
+    const stage = parseStageStrict(row.stage);
+    if (!stage) {
+      issues.push(`${prefix} (${id}): invalid stage "${row.stage ?? ''}". Use 1-6.`);
+      return;
+    }
+
+    const x = parseNumberStrict(row.position_x);
+    const y = parseNumberStrict(row.position_y);
+    if (x === null || y === null) {
+      issues.push(
+        `${prefix} (${id}): invalid position_x/position_y (received "${row.position_x ?? ''}", "${row.position_y ?? ''}").`
+      );
+      return;
+    }
+
+    const titleJa = (row.titleJa ?? '').trim();
+    const shortLabel = (row.shortLabel ?? '').trim();
+    if (!titleJa) {
+      issues.push(`${prefix} (${id}): titleJa is required.`);
+      return;
+    }
+    if (!shortLabel) {
+      issues.push(`${prefix} (${id}): shortLabel is required.`);
+      return;
+    }
+
+    seenIds.add(id);
+    nodes.push({
+      id,
+      track,
+      subtrack: (row.subtrack ?? '').trim() || undefined,
+      stage,
+      pathType,
+      titleJa,
+      shortLabel,
+      summary: (row.summary ?? '').trim(),
+      requiredSkills: splitList(row.requiredSkills),
+      requiredExperience: splitList(row.requiredExperience),
+      recommendedCerts: splitList(row.recommendedCerts),
+      toolsEnvironmentsLanguages: splitList(row.toolsEnvironmentsLanguages),
+      nextStepConditions: splitList(row.nextStepConditions),
+      tags: splitList(row.tags),
+      canCoexistWith: splitList(row.canCoexistWith),
+      relatedNodeIds: splitList(row.relatedNodeIds),
+      branchNote: (row.branchNote ?? '').trim() || undefined,
+      styleKey: (row.styleKey ?? '').trim() || undefined,
+      position: { x, y },
+    });
   });
+
+  if (nodes.length === 0) {
+    issues.push('Nodes sheet did not contain any valid rows.');
+  }
+
+  if (issues.length > 0) {
+    throw new SheetDataError('Nodes sheet validation failed.', formatIssues(issues));
+  }
+
+  return nodes;
+}
+
+function parseEdges(edgeRows: Record<string, string>[], nodeIds: Set<string>): CareerEdge[] {
+  const issues: string[] = [];
+  const edges: CareerEdge[] = [];
+  const seenEdges = new Set<string>();
+
+  edgeRows.forEach((row, index) => {
+    const rowNumber = index + 2;
+    const prefix = `Edges row ${rowNumber}`;
+
+    const source = (row.source ?? '').trim();
+    const target = (row.target ?? '').trim();
+    if (!source || !target) {
+      issues.push(`${prefix}: source and target are required.`);
+      return;
+    }
+
+    const edgeKey = `${source}=>${target}`;
+    if (seenEdges.has(edgeKey)) {
+      issues.push(`${prefix}: duplicate edge "${edgeKey}".`);
+      return;
+    }
+
+    const type = normalizeEdgeType(row.type);
+    if (!type) {
+      issues.push(`${prefix} (${edgeKey}): invalid edge type "${row.type ?? ''}".`);
+      return;
+    }
+
+    if (!nodeIds.has(source)) {
+      issues.push(`${prefix} (${edgeKey}): source node "${source}" does not exist in nodes sheet.`);
+      return;
+    }
+    if (!nodeIds.has(target)) {
+      issues.push(`${prefix} (${edgeKey}): target node "${target}" does not exist in nodes sheet.`);
+      return;
+    }
+
+    seenEdges.add(edgeKey);
+    edges.push({
+      source,
+      target,
+      type,
+      label: (row.label ?? '').trim() || undefined,
+    });
+  });
+
+  if (issues.length > 0) {
+    throw new SheetDataError('Edges sheet validation failed.', formatIssues(issues));
+  }
+
+  return edges;
 }
 
 export async function loadCareerDataFromSheets(): Promise<CareerDataSet> {
   const [nodesCsv, edgesCsv] = await Promise.all([
-    fetch(withCacheBust(SHEET_SOURCES.nodesCsvUrl), { cache: 'no-store' }).then((r) => r.text()),
-    fetch(withCacheBust(SHEET_SOURCES.edgesCsvUrl), { cache: 'no-store' }).then((r) => r.text()),
+    fetchSheetCsv(SHEET_SOURCES.nodesCsvUrl, 'Nodes sheet'),
+    fetchSheetCsv(SHEET_SOURCES.edgesCsvUrl, 'Edges sheet'),
   ]);
 
-  const nodeRows = csvToObjects(nodesCsv);
-  const edgeRows = csvToObjects(edgesCsv);
+  const nodeRows = validateRequiredHeaders(nodesCsv, REQUIRED_NODE_HEADERS, 'Nodes sheet');
+  const edgeRows = validateRequiredHeaders(edgesCsv, REQUIRED_EDGE_HEADERS, 'Edges sheet');
 
-  const nodes: CareerNode[] = nodeRows
-    .filter((r) => r.id && r.track && r.pathType)
-    .map((r) => {
-      const x = toNumber(r.position_x) ?? 180;
-      const y = toNumber(r.position_y) ?? 50;
+  const nodes = parseNodes(nodeRows);
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const edges = parseEdges(edgeRows, nodeIds);
 
-      return {
-        id: r.id,
-        track: normalizeTrack(r.track),
-        subtrack: r.subtrack || undefined,
-        stage: toStage(r.stage),
-        pathType: normalizePathType(r.pathType),
-        titleJa: r.titleJa || '',
-        shortLabel: r.shortLabel || '',
-        summary: r.summary || '',
-        requiredSkills: splitList(r.requiredSkills),
-        requiredExperience: splitList(r.requiredExperience),
-        recommendedCerts: splitList(r.recommendedCerts),
-        toolsEnvironmentsLanguages: splitList(r.toolsEnvironmentsLanguages),
-        nextStepConditions: splitList(r.nextStepConditions),
-        tags: splitList(r.tags),
-        canCoexistWith: splitList(r.canCoexistWith),
-        relatedNodeIds: splitList(r.relatedNodeIds),
-        branchNote: r.branchNote || undefined,
-        styleKey: r.styleKey || undefined,
-        position: { x, y },
-      };
-    });
-
-  const sheetEdges: CareerEdge[] = edgeRows
-    .filter((r) => r.source && r.target)
-    .map((r) => ({
-      source: r.source,
-      target: r.target,
-      type: (r.type as CareerEdge['type']) || 'normal',
-      label: r.label || undefined,
-    }));
-
-  const mergedNodes = mergeSheetContentIntoFallback(nodes);
-
-  // Keep local layout/topology as canonical and merge sheet textual content into it.
-  return {
-    nodes: mergedNodes,
-    edges: fallbackEdges.length > 0 ? fallbackEdges : sheetEdges,
-  };
+  return { nodes, edges };
 }

@@ -105,6 +105,53 @@ const App: React.FC = () => {
     setShowMobileTutorial(false);
   };
 
+  const inlineErrorBanner = loadError && data ? (
+    <div className="border-b border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 md:px-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-semibold">Google Sheetsの読み込みで問題が発生しました。</p>
+          <p className="mt-1 whitespace-pre-line break-words text-[11px] leading-relaxed text-amber-800">
+            {loadError}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void loadData()}
+          className="shrink-0 rounded-md border border-amber-200 bg-white px-2 py-1 text-[11px] text-amber-900 hover:bg-amber-100"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  ) : null;
+
+  const fullErrorState = loadError && !data && !loading ? (
+    <div className="flex-1 bg-gray-50 px-4 py-6 md:px-8 md:py-10">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-white p-5 shadow-sm md:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="text-base font-bold text-red-700 md:text-lg">
+              Google Sheetsの読み込みに失敗しました
+            </h2>
+            <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-gray-700">
+              {loadError}
+            </p>
+            <p className="mt-3 text-xs leading-relaxed text-gray-500">
+              シートの公開設定、列名、ノードID／エッジ参照、座標値を確認してください。
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadData()}
+            className="shrink-0 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       <header className="flex-shrink-0 bg-white border-b border-gray-200 px-3 py-2 md:px-5 md:py-3">
@@ -115,30 +162,30 @@ const App: React.FC = () => {
               <p className="text-[10px] md:text-[11px] text-gray-400 -mt-0.5 truncate">キャリアパスモデル（育成面談用）</p>
             </div>
             <div className="md:hidden inline-flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => setShowMobileTutorial(true)}
-              className="inline-flex items-center justify-center rounded-md border border-gray-200 p-2 text-gray-600"
-              aria-label="操作ガイド"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.024 2.6-2.5 2.93-.92.206-1.5.98-1.5 1.93v.14" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 17h.01" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-              </svg>
-            </button>
+              <button
+                type="button"
+                onClick={() => setShowMobileTutorial(true)}
+                className="inline-flex items-center justify-center rounded-md border border-gray-200 p-2 text-gray-600"
+                aria-label="操作ガイド"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.024 2.6-2.5 2.93-.92.206-1.5.98-1.5 1.93v.14" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 17h.01" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+                </svg>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setIsMobileFilterOpen(true)}
-              className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M6 12h12m-9 8h6" />
-              </svg>
-              Search/Filter
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileFilterOpen(true)}
+                className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M6 12h12m-9 8h6" />
+                </svg>
+                Search/Filter
+              </button>
+            </div>
             <div className="hidden md:block text-xs text-gray-400 shrink-0">
               現在の表示:{' '}
               <span className="font-semibold text-gray-600">{TRACK_LABELS[activeTrack]}</span>
@@ -163,23 +210,9 @@ const App: React.FC = () => {
             />
           </div>
         </div>
-
-        {loadError && (
-          <div className="mt-2 flex justify-end">
-            <button
-              type="button"
-              onClick={() => void loadData()}
-              className="rounded-md border border-gray-200 bg-white p-1.5 text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              aria-label="Retry loading"
-              title="Retry"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582M20 20v-5h-.581M5.153 9A8.001 8.001 0 0119 8m-.153 7A8.001 8.001 0 015 16" />
-              </svg>
-            </button>
-          </div>
-        )}
       </header>
+
+      {inlineErrorBanner}
 
       <div className="hidden md:block">
         <ControlBar
@@ -194,6 +227,8 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-hidden">
           <LoadingSkeleton />
         </div>
+      ) : fullErrorState ? (
+        fullErrorState
       ) : (
         <>
           <div className="hidden md:flex flex-1 overflow-hidden">

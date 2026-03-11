@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CareerEdge, CareerNode, PathType, Track } from '../types/career';
 
 const DEFAULT_SUBTRACKS: Record<Track, string[]> = {
@@ -104,25 +104,34 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
     return nodes;
   }, [allNodes, activeTrack, activeSubtrack, activeFilters, hasTrackSubtrackData, searchQuery]);
 
+  const visibleNodeIds = useMemo(() => new Set(filteredNodes.map((n) => n.id)), [filteredNodes]);
+
+  useEffect(() => {
+    if (!selectedNodeId) return;
+    if (!visibleNodeIds.has(selectedNodeId)) {
+      setSelectedNodeId(null);
+    }
+  }, [selectedNodeId, visibleNodeIds]);
+
   const filteredEdges: CareerEdge[] = useMemo(() => {
-    const nodeIds = new Set(filteredNodes.map((n) => n.id));
-    return allEdges.filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target));
-  }, [allEdges, filteredNodes]);
+    return allEdges.filter((e) => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target));
+  }, [allEdges, visibleNodeIds]);
 
   const connectedNodeIds: Set<string> = useMemo(() => {
-    if (!selectedNodeId) return new Set();
+    if (!selectedNodeId || !visibleNodeIds.has(selectedNodeId)) return new Set();
     const connected = new Set<string>();
     allEdges.forEach((e) => {
+      if (!visibleNodeIds.has(e.source) || !visibleNodeIds.has(e.target)) return;
       if (e.source === selectedNodeId) connected.add(e.target);
       if (e.target === selectedNodeId) connected.add(e.source);
     });
     return connected;
-  }, [allEdges, selectedNodeId]);
+  }, [allEdges, selectedNodeId, visibleNodeIds]);
 
   const selectedNode: CareerNode | null = useMemo(() => {
-    if (!selectedNodeId) return null;
+    if (!selectedNodeId || !visibleNodeIds.has(selectedNodeId)) return null;
     return getNodeById(selectedNodeId) || null;
-  }, [getNodeById, selectedNodeId]);
+  }, [getNodeById, selectedNodeId, visibleNodeIds]);
 
   const handleNodeClick = useCallback(
     (nodeId: string) => {
