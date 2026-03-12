@@ -6,10 +6,12 @@ const STAGE_Y_BASE = 50;
 const STAGE_Y_GAP = 150;
 const STAGES = [1, 2, 3, 4, 5, 6];
 const DEFAULT_NODE_WIDTH = 140;
+const COMMON_NODE_VISUAL_SHIFT_X = -8;
 const TRACK_HEADER_PADDING = 40;
 
 const laneCenter = (x: number, nodeWidth = DEFAULT_NODE_WIDTH) => x + nodeWidth / 2;
-const commonNodeCenter = (specialistX: number, managerX: number) => (laneCenter(specialistX) + laneCenter(managerX)) / 2;
+const commonNodeCenter = (specialistX: number, managerX: number) =>
+  (laneCenter(specialistX) + laneCenter(managerX)) / 2 + COMMON_NODE_VISUAL_SHIFT_X;
 
 const singleLaneGroup = (label: string, x: number, laneLabel = 'Manager') => ({
   label,

@@ -12,8 +12,11 @@ const STAGES = [1, 2, 3, 4, 5, 6] as const;
 
 const DEFAULT_NODE_WIDTH = 140;
 const COMMON_NODE_WIDTH = 220;
+/** 공통 1단계 노드를 兼任可 라벨 축에 더 가깝게 맞추기 위한 미세 조정 */
+const COMMON_NODE_VISUAL_SHIFT_X = -8;
 /** 공통 노드를 시각적 중앙에 맞추기 위한 left offset */
-const COMMON_X_OFFSET = Math.round((DEFAULT_NODE_WIDTH - COMMON_NODE_WIDTH) / 2);
+const COMMON_X_OFFSET =
+  Math.round((DEFAULT_NODE_WIDTH - COMMON_NODE_WIDTH) / 2) + COMMON_NODE_VISUAL_SHIFT_X;
 
 // Development
 const DEV_WEB_SP_X = 80;
