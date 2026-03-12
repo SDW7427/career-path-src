@@ -29,6 +29,8 @@ interface SkillTreeGraphProps {
   showControls?: boolean;
 }
 
+const MOBILE_COMMON_STAGE_SHIFT_X = -8;
+
 /** Map CareerEdge.type to CSS class */
 function edgeClassName(type: CareerEdge['type']): string {
   switch (type) {
@@ -57,26 +59,55 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   showMiniMap = true,
   showControls = true,
 }) => {
+  const [isMobileViewport, setIsMobileViewport] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 767px)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const updateViewportMode = () => {
+      setIsMobileViewport(window.matchMedia('(max-width: 767px)').matches);
+    };
+
+    updateViewportMode();
+    window.addEventListener('resize', updateViewportMode);
+
+    return () => {
+      window.removeEventListener('resize', updateViewportMode);
+    };
+  }, []);
+
   // Convert CareerNode[] → React Flow Node[]
   const rfNodes: Node[] = useMemo(() => {
-    return careerNodes.map((cn) => ({
-      id: cn.id,
-      type: 'careerNode',
-      position: cn.position,
-      data: {
-        nodeId: cn.id,
-        shortLabel: cn.shortLabel,
-        titleJa: cn.titleJa,
-        stage: cn.stage,
-        pathType: cn.pathType,
-        track: cn.track,
-        subtrack: cn.subtrack,
-        styleKey: cn.styleKey,
-        isSelected: cn.id === selectedNodeId,
-        isConnected: connectedNodeIds.has(cn.id),
-      } satisfies CareerNodeData,
-    }));
-  }, [careerNodes, selectedNodeId, connectedNodeIds]);
+    return careerNodes.map((cn) => {
+      const mobileCommonStageShift = cn.stage === 1 && cn.pathType === 'common' && isMobileViewport
+        ? MOBILE_COMMON_STAGE_SHIFT_X
+        : 0;
+
+      return {
+        id: cn.id,
+        type: 'careerNode',
+        position: {
+          ...cn.position,
+          x: cn.position.x + mobileCommonStageShift,
+        },
+        data: {
+          nodeId: cn.id,
+          shortLabel: cn.shortLabel,
+          titleJa: cn.titleJa,
+          stage: cn.stage,
+          pathType: cn.pathType,
+          track: cn.track,
+          subtrack: cn.subtrack,
+          styleKey: cn.styleKey,
+          isSelected: cn.id === selectedNodeId,
+          isConnected: connectedNodeIds.has(cn.id),
+        } satisfies CareerNodeData,
+      };
+    });
+  }, [careerNodes, selectedNodeId, connectedNodeIds, isMobileViewport]);
 
   // Convert CareerEdge[] → React Flow Edge[]
   const rfEdges: Edge[] = useMemo(() => {
@@ -262,57 +293,34 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         <ReactFlow
           nodes={nodes}
           edges={edges}
+          nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeClick={handleNodeClick}
-          onInit={(inst) => setRfInstance(inst)}
-          nodeTypes={nodeTypes}
-          minZoom={0.3}
+          fitView={false}
+          fitViewOptions={{ padding: 0.28 }}
+          minZoom={0.32}
           maxZoom={1.5}
+          onInit={setRfInstance}
           colorMode={'light' as ColorMode}
-          proOptions={{ hideAttribution: true }}
-          nodesDraggable={false}
+          className="rounded-xl border border-gray-200 bg-white"
         >
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
-          {showControls && (
-            <Controls showInteractive={false} className="!bg-white !border-gray-200 !shadow-sm" />
-          )}
+          <StageLaneOverlay track={track} />
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#e5e7eb" />
+
+          {showControls && <Controls position="bottom-right" />}
+
           {showMiniMap && (
             <MiniMap
-              nodeColor={minimapColor}
-              maskColor="rgba(0,0,0,0.08)"
-              className="!bg-white !border-gray-200"
-              pannable
+              position="bottom-left"
               zoomable
+              pannable
+              nodeBorderRadius={8}
+              maskColor="rgba(255,255,255,0.65)"
+              nodeColor={() => minimapColor}
             />
           )}
-          <StageLaneOverlay track={track} />
         </ReactFlow>
-      </div>
-
-      {!isInitialViewportReady && (
-        <div className="absolute inset-0 bg-white pointer-events-none">
-          <div className="absolute inset-0 animate-pulse">
-            <div className="absolute left-8 top-8 h-10 w-40 rounded bg-gray-100" />
-            <div className="absolute left-56 top-8 h-10 w-40 rounded bg-gray-100" />
-            <div className="absolute left-8 top-24 h-10 w-40 rounded bg-gray-100" />
-            <div className="absolute left-56 top-24 h-10 w-40 rounded bg-gray-100" />
-            <div className="absolute left-8 top-40 h-10 w-40 rounded bg-gray-100" />
-            <div className="absolute left-56 top-40 h-10 w-40 rounded bg-gray-100" />
-            <div className="absolute left-8 top-56 h-10 w-40 rounded bg-gray-100" />
-            <div className="absolute left-56 top-56 h-10 w-40 rounded bg-gray-100" />
-            <div className="absolute left-8 top-72 h-10 w-40 rounded bg-gray-100" />
-            <div className="absolute left-56 top-72 h-10 w-40 rounded bg-gray-100" />
-
-            {showMiniMap && (
-              <div className="absolute bottom-8 right-8 h-40 w-56 rounded bg-gray-100" />
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className="absolute bottom-2 left-2 text-[10px] text-gray-400 bg-white/80 px-2 py-1 rounded">
-        ※ SpecialistやManagerは兼任可能
       </div>
     </div>
   );
