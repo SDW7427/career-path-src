@@ -286,16 +286,13 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
               zoomable
             />
           )}
-          {/* Stage lane labels overlay */}
           <StageLaneOverlay track={track} />
         </ReactFlow>
       </div>
 
-      {/* Skeleton overlay during the tiny window before the first fitView */}
       {!isInitialViewportReady && (
         <div className="absolute inset-0 bg-white pointer-events-none">
           <div className="absolute inset-0 animate-pulse">
-            {/* faint canvas blocks to suggest the graph */}
             <div className="absolute left-8 top-8 h-10 w-40 rounded bg-gray-100" />
             <div className="absolute left-56 top-8 h-10 w-40 rounded bg-gray-100" />
             <div className="absolute left-8 top-24 h-10 w-40 rounded bg-gray-100" />
@@ -307,7 +304,6 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
             <div className="absolute left-8 top-72 h-10 w-40 rounded bg-gray-100" />
             <div className="absolute left-56 top-72 h-10 w-40 rounded bg-gray-100" />
 
-            {/* minimap placeholder (desktop only) */}
             {showMiniMap && (
               <div className="absolute bottom-8 right-8 h-40 w-56 rounded bg-gray-100" />
             )}
@@ -315,7 +311,6 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         </div>
       )}
 
-      {/* Legend note */}
       <div className="absolute bottom-2 left-2 text-[10px] text-gray-400 bg-white/80 px-2 py-1 rounded">
         ※ SpecialistやManagerは兼任可能
       </div>
