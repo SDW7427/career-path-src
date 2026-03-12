@@ -58,13 +58,13 @@ function getGroupHeaders(track: Track, commonStageShiftX: number): GroupHeader[]
   switch (track) {
     case 'development':
       return [
-        dualLaneGroup('Webアプリケーション', 80, 260, commonStageShiftX),
-        dualLaneGroup('モバイルアプリ', 500, 680, commonStageShiftX),
+        dualLaneGroup('Webアプリケーション', 60, 280, commonStageShiftX),
+        dualLaneGroup('モバイルアプリ', 480, 700, commonStageShiftX),
       ];
     case 'infrastructure':
       return [
-        dualLaneGroup('サーバー', 80, 260, commonStageShiftX),
-        dualLaneGroup('ネットワーク', 500, 680, commonStageShiftX),
+        dualLaneGroup('サーバー', 60, 280, commonStageShiftX),
+        dualLaneGroup('ネットワーク', 480, 700, commonStageShiftX),
       ];
     case 'it-support':
       return [
