@@ -5,13 +5,12 @@ import type { Track } from '../types/career';
 const STAGE_Y_BASE = 50;
 const STAGE_Y_GAP = 150;
 const STAGES = [1, 2, 3, 4, 5, 6];
-const GROUP_TITLE_HALF_WIDTH = 72;
-
 const DEFAULT_NODE_WIDTH = 140;
 const TRACK_HEADER_PADDING = 40;
-const LANE_LABEL_HALF_WIDTH = 28;
 
 const laneCenter = (x: number, nodeWidth = DEFAULT_NODE_WIDTH) => x + nodeWidth / 2;
+const commonNodeCenter = (specialistX: number, managerX: number) => (laneCenter(specialistX) + laneCenter(managerX)) / 2;
+
 const singleLaneGroup = (label: string, x: number, laneLabel = 'Manager') => ({
   label,
   centerX: laneCenter(x),
@@ -28,7 +27,7 @@ const dualLaneGroup = (
   managerLabel = 'Manager'
 ) => ({
   label,
-  centerX: (laneCenter(specialistX) + laneCenter(managerX)) / 2,
+  centerX: commonNodeCenter(specialistX, managerX),
   startX: specialistX - TRACK_HEADER_PADDING,
   endX: managerX + DEFAULT_NODE_WIDTH + TRACK_HEADER_PADDING,
   lanes: [
@@ -142,11 +141,13 @@ const StageLaneOverlay: React.FC<StageLaneOverlayProps> = ({ track }) => {
             }}
           />
 
+
           <div
-            className="absolute px-3 py-1 rounded-full border border-blue-300 bg-white/95 text-[13px] font-bold text-blue-800 shadow-sm"
+            className="absolute px-3 py-1 rounded-full border border-blue-300 bg-white/95 text-[13px] font-bold text-blue-800 shadow-sm whitespace-nowrap"
             style={{
               top: titleTop,
-              left: group.centerX * zoom + x - GROUP_TITLE_HALF_WIDTH,
+              left: group.centerX * zoom + x,
+              transform: 'translateX(-50%)',
             }}
           >
             {group.label}
@@ -155,10 +156,11 @@ const StageLaneOverlay: React.FC<StageLaneOverlayProps> = ({ track }) => {
           {group.lanes.map((lane) => (
             <div
               key={`${group.label}-${lane.label}`}
-              className="absolute text-[10px] text-blue-700"
+              className="absolute text-[10px] text-blue-700 whitespace-nowrap"
               style={{
                 top: laneTop,
-                left: lane.x * zoom + x - LANE_LABEL_HALF_WIDTH,
+                left: lane.x * zoom + x,
+                transform: 'translateX(-50%)',
               }}
             >
               {lane.label}
