@@ -113,6 +113,11 @@ html, body, #root {
   background: var(--color-manager);
 }
 
+/* Manager track nodes use a dashed outline */
+.career-node.path-manager {
+  border-style: dashed;
+}
+
 .career-node.track-development.path-common,
 .career-node.track-infrastructure.path-common {
   background: var(--color-common);
