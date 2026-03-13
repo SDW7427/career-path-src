@@ -53,22 +53,22 @@ function getGroupHeaders(track: Track): GroupHeader[] {
       return [
         {
           label: 'サーバー',
-          centerX: 170,
-          startX: 10,
+          centerX: 150,
+          startX: 0,
           endX: 330,
           lanes: [
-            { label: 'Specialist', x: 80 },
+            { label: 'Specialist', x: 40 },
             { label: 'Manager', x: 260 },
           ],
         },
         {
           label: 'ネットワーク',
-          centerX: 630,
+          centerX: 650,
           startX: 470,
-          endX: 790,
+          endX: 830,
           lanes: [
             { label: 'Specialist', x: 540 },
-            { label: 'Manager', x: 720 },
+            { label: 'Manager', x: 760 },
           ],
         },
       ];
