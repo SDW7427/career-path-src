@@ -31,6 +31,9 @@ interface SkillTreeGraphProps {
 
 const MOBILE_COMMON_STAGE_SHIFT_X = -8;
 
+// Keep every vertical lane on one exact x-axis.
+// For infra / IT support, use the lowest available stage in the lane as the canonical anchor.
+
 function getLaneAlignmentKey(node: CareerNodeType): string | null {
   if (node.track === 'infrastructure' && (node.pathType === 'specialist' || node.pathType === 'manager')) {
     return `${node.track}::${node.subtrack ?? ''}::${node.pathType}`;
@@ -92,21 +95,20 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
   }, []);
 
   const alignedNodePositions = useMemo(() => {
-    const laneXBuckets = new Map<string, number[]>();
+    const canonicalLaneX = new Map<string, number>();
 
-    careerNodes.forEach((node) => {
-      const laneKey = getLaneAlignmentKey(node);
-      if (!laneKey) return;
-
-      const bucket = laneXBuckets.get(laneKey) ?? [];
-      bucket.push(node.position.x);
-      laneXBuckets.set(laneKey, bucket);
+    const sortedNodes = [...careerNodes].sort((a, b) => {
+      const stageDiff = a.stage - b.stage;
+      if (stageDiff !== 0) return stageDiff;
+      return a.position.x - b.position.x;
     });
 
-    const canonicalLaneX = new Map<string, number>();
-    laneXBuckets.forEach((values, key) => {
-      const avgX = values.reduce((sum, value) => sum + value, 0) / values.length;
-      canonicalLaneX.set(key, Math.round(avgX));
+    sortedNodes.forEach((node) => {
+      const laneKey = getLaneAlignmentKey(node);
+      if (!laneKey) return;
+      if (!canonicalLaneX.has(laneKey)) {
+        canonicalLaneX.set(laneKey, node.position.x);
+      }
     });
 
     const aligned = new Map<string, { x: number; y: number }>();
