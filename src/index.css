@@ -73,12 +73,12 @@ html, body, #root {
 
 .career-node {
   box-sizing: border-box;
-  width: 140px;
+  width: 156px;
   border-radius: 8px;
   border: 2px solid #e2e8f0;
   padding: 10px 14px;
-  min-width: 140px;
-  max-width: 140px;
+  min-width: 156px;
+  max-width: 156px;
   background: white;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -133,9 +133,9 @@ html, body, #root {
 
 /* 공통 1단계 노드만 확장 */
 .career-node.stage-1.path-common {
-  width: 220px;
-  min-width: 220px;
-  max-width: 220px;
+  width: 236px;
+  min-width: 236px;
+  max-width: 236px;
 }
 
 /* 공통 1단계는 배지/제목 줄바꿈 방지 */
@@ -264,6 +264,7 @@ html, body, #root {
 
   /* 모바일도 공통 1단계 폭을 PC와 동일하게 유지 */
   .career-node.stage-1.path-common {
+    width: 220px;
     min-width: 220px;
     max-width: 220px;
   }
