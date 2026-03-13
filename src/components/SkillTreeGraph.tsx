@@ -31,6 +31,18 @@ interface SkillTreeGraphProps {
 
 const MOBILE_COMMON_STAGE_SHIFT_X = -8;
 
+function getLaneAlignmentKey(node: CareerNodeType): string | null {
+  if (node.track === 'infrastructure' && (node.pathType === 'specialist' || node.pathType === 'manager')) {
+    return `${node.track}::${node.subtrack ?? ''}::${node.pathType}`;
+  }
+
+  if (node.track === 'it-support') {
+    return `${node.track}::${node.subtrack ?? ''}::single-lane`;
+  }
+
+  return null;
+}
+
 /** Map CareerEdge.type to CSS class */
 function edgeClassName(type: CareerEdge['type']): string {
   switch (type) {
@@ -79,35 +91,62 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
     };
   }, []);
 
+  const alignedNodePositions = useMemo(() => {
+    const laneXBuckets = new Map<string, number[]>();
+
+    careerNodes.forEach((node) => {
+      const laneKey = getLaneAlignmentKey(node);
+      if (!laneKey) return;
+
+      const bucket = laneXBuckets.get(laneKey) ?? [];
+      bucket.push(node.position.x);
+      laneXBuckets.set(laneKey, bucket);
+    });
+
+    const canonicalLaneX = new Map<string, number>();
+    laneXBuckets.forEach((values, key) => {
+      const avgX = values.reduce((sum, value) => sum + value, 0) / values.length;
+      canonicalLaneX.set(key, Math.round(avgX));
+    });
+
+    const aligned = new Map<string, { x: number; y: number }>();
+
+    careerNodes.forEach((node) => {
+      const laneKey = getLaneAlignmentKey(node);
+      const mobileCommonStageShift =
+        node.stage === 1 && node.pathType === 'common' && isMobileViewport ? MOBILE_COMMON_STAGE_SHIFT_X : 0;
+
+      const alignedX = laneKey ? canonicalLaneX.get(laneKey) ?? node.position.x : node.position.x;
+
+      aligned.set(node.id, {
+        x: alignedX + mobileCommonStageShift,
+        y: node.position.y,
+      });
+    });
+
+    return aligned;
+  }, [careerNodes, isMobileViewport]);
+
   // Convert CareerNode[] → React Flow Node[]
   const rfNodes: Node[] = useMemo(() => {
-    return careerNodes.map((cn) => {
-      const mobileCommonStageShift = cn.stage === 1 && cn.pathType === 'common' && isMobileViewport
-        ? MOBILE_COMMON_STAGE_SHIFT_X
-        : 0;
-
-      return {
-        id: cn.id,
-        type: 'careerNode',
-        position: {
-          ...cn.position,
-          x: cn.position.x + mobileCommonStageShift,
-        },
-        data: {
-          nodeId: cn.id,
-          shortLabel: cn.shortLabel,
-          titleJa: cn.titleJa,
-          stage: cn.stage,
-          pathType: cn.pathType,
-          track: cn.track,
-          subtrack: cn.subtrack,
-          styleKey: cn.styleKey,
-          isSelected: cn.id === selectedNodeId,
-          isConnected: connectedNodeIds.has(cn.id),
-        } satisfies CareerNodeData,
-      };
-    });
-  }, [careerNodes, selectedNodeId, connectedNodeIds, isMobileViewport]);
+    return careerNodes.map((cn) => ({
+      id: cn.id,
+      type: 'careerNode',
+      position: alignedNodePositions.get(cn.id) ?? cn.position,
+      data: {
+        nodeId: cn.id,
+        shortLabel: cn.shortLabel,
+        titleJa: cn.titleJa,
+        stage: cn.stage,
+        pathType: cn.pathType,
+        track: cn.track,
+        subtrack: cn.subtrack,
+        styleKey: cn.styleKey,
+        isSelected: cn.id === selectedNodeId,
+        isConnected: connectedNodeIds.has(cn.id),
+      } satisfies CareerNodeData,
+    }));
+  }, [careerNodes, selectedNodeId, connectedNodeIds, alignedNodePositions]);
 
   // Convert CareerEdge[] → React Flow Edge[]
   const rfEdges: Edge[] = useMemo(() => {
@@ -116,15 +155,19 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
     return careerEdges.map((ce, idx) => {
       const sourceNode = nodeMeta.get(ce.source);
       const targetNode = nodeMeta.get(ce.target);
+      const sourcePosition = alignedNodePositions.get(ce.source);
+      const targetPosition = alignedNodePositions.get(ce.target);
       const isSameStage =
         sourceNode !== undefined &&
         targetNode !== undefined &&
         sourceNode.stage === targetNode.stage;
 
       const sourceIsLeft =
-        sourceNode !== undefined && targetNode !== undefined
-          ? sourceNode.position.x <= targetNode.position.x
-          : true;
+        sourcePosition !== undefined && targetPosition !== undefined
+          ? sourcePosition.x <= targetPosition.x
+          : sourceNode !== undefined && targetNode !== undefined
+            ? sourceNode.position.x <= targetNode.position.x
+            : true;
 
       const isVerticalLaneProgression =
         ce.type === 'normal' &&
@@ -134,6 +177,12 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         sourceNode.track === targetNode.track &&
         sourceNode.subtrack === targetNode.subtrack &&
         (sourceNode.track === 'it-support' || sourceNode.pathType === targetNode.pathType);
+
+      const isAlignedVerticalLane =
+        isVerticalLaneProgression &&
+        sourcePosition !== undefined &&
+        targetPosition !== undefined &&
+        sourcePosition.x === targetPosition.x;
 
       return {
         id: `e-${ce.source}-${ce.target}-${idx}`,
@@ -151,11 +200,18 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
               ? { stroke: '#94a3b8', strokeDasharray: '6 4' }
               : { stroke: '#94a3b8' },
         labelStyle: { fontSize: 10, fill: '#64748b' },
-        type: ce.type === 'cross-track' ? 'smoothstep' : isVerticalLaneProgression ? 'step' : 'straight',
-        pathOptions: isVerticalLaneProgression ? { borderRadius: 0 } : undefined,
+        type:
+          ce.type === 'cross-track'
+            ? 'smoothstep'
+            : isAlignedVerticalLane
+              ? 'straight'
+              : isVerticalLaneProgression
+                ? 'step'
+                : 'straight',
+        pathOptions: isAlignedVerticalLane || !isVerticalLaneProgression ? undefined : { borderRadius: 0 },
       };
     });
-  }, [careerEdges, careerNodes]);
+  }, [careerEdges, careerNodes, alignedNodePositions]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges);
