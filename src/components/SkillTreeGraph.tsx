@@ -29,7 +29,12 @@ interface SkillTreeGraphProps {
   showControls?: boolean;
 }
 
-const MOBILE_COMMON_STAGE_SHIFT_X = -8;
+const MOBILE_COMMON_STAGE_SHIFT_BY_TRACK: Partial<Record<Track, number>> = {
+  development: -8,
+  infrastructure: 0,
+};
+
+const MOBILE_DEVELOPMENT_TRACK_GAP_EXPAND_X = 12;
 
 // Keep every vertical lane on one exact x-axis.
 // For infra / IT support, use the lowest available stage in the lane as the canonical anchor.
@@ -115,13 +120,36 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
 
     careerNodes.forEach((node) => {
       const laneKey = getLaneAlignmentKey(node);
-      const mobileCommonStageShift =
-        node.stage === 1 && node.pathType === 'common' && isMobileViewport ? MOBILE_COMMON_STAGE_SHIFT_X : 0;
+      const baseMobileCommonStageShift =
+        node.stage === 1 && node.pathType === 'common' && isMobileViewport
+          ? MOBILE_COMMON_STAGE_SHIFT_BY_TRACK[node.track] ?? 0
+          : 0;
+
+      let mobileDevelopmentTrackGapShift = 0;
+      let mobileDevelopmentCommonCenterShift = 0;
+
+      if (isMobileViewport && node.track === 'development') {
+        if (node.pathType === 'specialist' && node.subtrack === 'Webアプリケーション') {
+          mobileDevelopmentTrackGapShift = -MOBILE_DEVELOPMENT_TRACK_GAP_EXPAND_X;
+        }
+
+        if (node.pathType === 'manager' && node.subtrack === 'モバイルアプリ') {
+          mobileDevelopmentTrackGapShift = MOBILE_DEVELOPMENT_TRACK_GAP_EXPAND_X;
+        }
+
+        if (node.stage === 1 && node.pathType === 'common') {
+          if (node.subtrack === 'Webアプリケーション') {
+            mobileDevelopmentCommonCenterShift = -MOBILE_DEVELOPMENT_TRACK_GAP_EXPAND_X / 2;
+          } else if (node.subtrack === 'モバイルアプリ') {
+            mobileDevelopmentCommonCenterShift = MOBILE_DEVELOPMENT_TRACK_GAP_EXPAND_X / 2;
+          }
+        }
+      }
 
       const alignedX = laneKey ? canonicalLaneX.get(laneKey) ?? node.position.x : node.position.x;
 
       aligned.set(node.id, {
-        x: alignedX + mobileCommonStageShift,
+        x: alignedX + baseMobileCommonStageShift + mobileDevelopmentTrackGapShift + mobileDevelopmentCommonCenterShift,
         y: node.position.y,
       });
     });
