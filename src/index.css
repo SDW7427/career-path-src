@@ -264,3 +264,11 @@ html, body, #root {
     max-width: 220px;
   }
 }
+
+/* Keep long infrastructure network labels on one line */
+.career-node[data-node-id="infra-network-sp-2"] .node-title,
+.career-node[data-node-id="infra-network-sp-3"] .node-title {
+  white-space: nowrap;
+  font-size: 12px;
+  letter-spacing: -0.01em;
+}
