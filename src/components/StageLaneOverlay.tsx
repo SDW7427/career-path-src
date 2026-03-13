@@ -1,13 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React from 'react';
 import { useViewport } from '@xyflow/react';
 import type { Track } from '../types/career';
 
 const STAGE_Y_BASE = 50;
 const STAGE_Y_GAP = 150;
 const STAGES = [1, 2, 3, 4, 5, 6];
-const DEFAULT_NODE_WIDTH = 140;
-const TRACK_HEADER_PADDING = 40;
-const MOBILE_COMMON_STAGE_SHIFT_X = -8;
+const GROUP_TITLE_HALF_WIDTH = 72;
 
 interface StageLaneOverlayProps {
   track: Track;
@@ -26,51 +24,77 @@ interface GroupHeader {
   lanes: LaneHeader[];
 }
 
-const laneCenter = (x: number, nodeWidth = DEFAULT_NODE_WIDTH) => x + nodeWidth / 2;
-
-const singleLaneGroup = (label: string, x: number, laneLabel = 'Manager'): GroupHeader => ({
-  label,
-  centerX: laneCenter(x),
-  startX: x - TRACK_HEADER_PADDING,
-  endX: x + DEFAULT_NODE_WIDTH + TRACK_HEADER_PADDING,
-  lanes: [{ label: laneLabel, x: laneCenter(x) }],
-});
-
-const dualLaneGroup = (
-  label: string,
-  specialistX: number,
-  managerX: number,
-  commonStageShiftX: number,
-  specialistLabel = 'Specialist',
-  managerLabel = 'Manager'
-): GroupHeader => ({
-  label,
-  centerX: (laneCenter(specialistX) + laneCenter(managerX)) / 2 + commonStageShiftX,
-  startX: specialistX - TRACK_HEADER_PADDING,
-  endX: managerX + DEFAULT_NODE_WIDTH + TRACK_HEADER_PADDING,
-  lanes: [
-    { label: specialistLabel, x: laneCenter(specialistX) },
-    { label: managerLabel, x: laneCenter(managerX) },
-  ],
-});
-
-function getGroupHeaders(track: Track, commonStageShiftX: number): GroupHeader[] {
+function getGroupHeaders(track: Track): GroupHeader[] {
   switch (track) {
     case 'development':
       return [
-        dualLaneGroup('Webアプリケーション', 60, 280, commonStageShiftX),
-        dualLaneGroup('モバイルアプリ', 480, 700, commonStageShiftX),
+        {
+          label: 'Webアプリケーション',
+          centerX: 170,
+          startX: 10,
+          endX: 330,
+          lanes: [
+            { label: 'Specialist', x: 80 },
+            { label: 'Manager', x: 260 },
+          ],
+        },
+        {
+          label: 'モバイルアプリ',
+          centerX: 590,
+          startX: 430,
+          endX: 750,
+          lanes: [
+            { label: 'Specialist', x: 500 },
+            { label: 'Manager', x: 680 },
+          ],
+        },
       ];
     case 'infrastructure':
       return [
-        dualLaneGroup('サーバー', 40, 300, commonStageShiftX),
-        dualLaneGroup('ネットワーク', 460, 720, commonStageShiftX),
+        {
+          label: 'サーバー',
+          centerX: 170,
+          startX: 10,
+          endX: 330,
+          lanes: [
+            { label: 'Specialist', x: 80 },
+            { label: 'Manager', x: 260 },
+          ],
+        },
+        {
+          label: 'ネットワーク',
+          centerX: 670,
+          startX: 510,
+          endX: 830,
+          lanes: [
+            { label: 'Specialist', x: 580 },
+            { label: 'Manager', x: 760 },
+          ],
+        },
       ];
     case 'it-support':
       return [
-        singleLaneGroup('ITサポート', 100),
-        singleLaneGroup('情シス支援', 350),
-        singleLaneGroup('PMO支援', 600),
+        {
+          label: 'ITサポート',
+          centerX: 100,
+          startX: 20,
+          endX: 180,
+          lanes: [{ label: 'Manager', x: 100 }],
+        },
+        {
+          label: '情シス支援',
+          centerX: 350,
+          startX: 270,
+          endX: 430,
+          lanes: [{ label: 'Manager', x: 350 }],
+        },
+        {
+          label: 'PMO支援',
+          centerX: 600,
+          startX: 520,
+          endX: 680,
+          lanes: [{ label: 'Manager', x: 600 }],
+        },
       ];
   }
 }
@@ -81,31 +105,7 @@ function getGroupHeaders(track: Track, commonStageShiftX: number): GroupHeader[]
  */
 const StageLaneOverlay: React.FC<StageLaneOverlayProps> = ({ track }) => {
   const { x, y, zoom } = useViewport();
-  const [isMobileViewport, setIsMobileViewport] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(max-width: 767px)').matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const updateViewportMode = () => {
-      setIsMobileViewport(window.matchMedia('(max-width: 767px)').matches);
-    };
-
-    updateViewportMode();
-    window.addEventListener('resize', updateViewportMode);
-
-    return () => {
-      window.removeEventListener('resize', updateViewportMode);
-    };
-  }, []);
-
-  const commonStageShiftX = isMobileViewport ? MOBILE_COMMON_STAGE_SHIFT_X : 0;
-  const groupHeaders = useMemo(
-    () => getGroupHeaders(track, commonStageShiftX),
-    [track, commonStageShiftX]
-  );
+  const groupHeaders = getGroupHeaders(track);
   const separatorXs = groupHeaders
     .slice(0, -1)
     .map((group, idx) => (group.endX + groupHeaders[idx + 1].startX) / 2);
@@ -167,11 +167,10 @@ const StageLaneOverlay: React.FC<StageLaneOverlayProps> = ({ track }) => {
           />
 
           <div
-            className="absolute px-3 py-1 rounded-full border border-blue-300 bg-white/95 text-[13px] font-bold text-blue-800 shadow-sm whitespace-nowrap"
+            className="absolute px-3 py-1 rounded-full border border-blue-300 bg-white/95 text-[13px] font-bold text-blue-800 shadow-sm"
             style={{
               top: titleTop,
-              left: group.centerX * zoom + x,
-              transform: 'translateX(-50%)',
+              left: group.centerX * zoom + x - GROUP_TITLE_HALF_WIDTH,
             }}
           >
             {group.label}
@@ -180,11 +179,10 @@ const StageLaneOverlay: React.FC<StageLaneOverlayProps> = ({ track }) => {
           {group.lanes.map((lane) => (
             <div
               key={`${group.label}-${lane.label}`}
-              className="absolute text-[10px] text-blue-700 whitespace-nowrap"
+              className="absolute text-[10px] text-blue-700"
               style={{
                 top: laneTop,
-                left: lane.x * zoom + x,
-                transform: 'translateX(-50%)',
+                left: lane.x * zoom + x - 28,
               }}
             >
               {lane.label}
