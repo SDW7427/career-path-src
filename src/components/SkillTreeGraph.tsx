@@ -126,6 +126,15 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
           ? sourceNode.position.x <= targetNode.position.x
           : true;
 
+      const isVerticalLaneProgression =
+        ce.type === 'normal' &&
+        sourceNode !== undefined &&
+        targetNode !== undefined &&
+        sourceNode.stage !== targetNode.stage &&
+        sourceNode.track === targetNode.track &&
+        sourceNode.subtrack === targetNode.subtrack &&
+        (sourceNode.track === 'it-support' || sourceNode.pathType === targetNode.pathType);
+
       return {
         id: `e-${ce.source}-${ce.target}-${idx}`,
         source: ce.source,
@@ -142,8 +151,8 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
               ? { stroke: '#94a3b8', strokeDasharray: '6 4' }
               : { stroke: '#94a3b8' },
         labelStyle: { fontSize: 10, fill: '#64748b' },
-        // 段階の進行エッジ（例: 段階1→2）は直線で描画したい
-        type: ce.type === 'cross-track' ? 'smoothstep' : 'straight',
+        type: ce.type === 'cross-track' ? 'smoothstep' : isVerticalLaneProgression ? 'step' : 'straight',
+        pathOptions: isVerticalLaneProgression ? { borderRadius: 0 } : undefined,
       };
     });
   }, [careerEdges, careerNodes]);
