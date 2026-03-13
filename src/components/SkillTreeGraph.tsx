@@ -29,12 +29,7 @@ interface SkillTreeGraphProps {
   showControls?: boolean;
 }
 
-const MOBILE_COMMON_STAGE_SHIFT_BY_TRACK: Partial<Record<Track, number>> = {
-  development: -8,
-  infrastructure: 0,
-};
-
-const MOBILE_DEVELOPMENT_TRACK_GAP_EXPAND_X = 12;
+const MOBILE_COMMON_STAGE_SHIFT = 4;
 
 // Keep every vertical lane on one exact x-axis.
 // For infra / IT support, use the lowest available stage in the lane as the canonical anchor.
@@ -120,36 +115,13 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
 
     careerNodes.forEach((node) => {
       const laneKey = getLaneAlignmentKey(node);
-      const baseMobileCommonStageShift =
-        node.stage === 1 && node.pathType === 'common' && isMobileViewport
-          ? MOBILE_COMMON_STAGE_SHIFT_BY_TRACK[node.track] ?? 0
-          : 0;
-
-      let mobileDevelopmentTrackGapShift = 0;
-      let mobileDevelopmentCommonCenterShift = 0;
-
-      if (isMobileViewport && node.track === 'development') {
-        if (node.pathType === 'specialist' && node.subtrack === 'Webアプリケーション') {
-          mobileDevelopmentTrackGapShift = -MOBILE_DEVELOPMENT_TRACK_GAP_EXPAND_X;
-        }
-
-        if (node.pathType === 'manager' && node.subtrack === 'モバイルアプリ') {
-          mobileDevelopmentTrackGapShift = MOBILE_DEVELOPMENT_TRACK_GAP_EXPAND_X;
-        }
-
-        if (node.stage === 1 && node.pathType === 'common') {
-          if (node.subtrack === 'Webアプリケーション') {
-            mobileDevelopmentCommonCenterShift = -MOBILE_DEVELOPMENT_TRACK_GAP_EXPAND_X / 2;
-          } else if (node.subtrack === 'モバイルアプリ') {
-            mobileDevelopmentCommonCenterShift = MOBILE_DEVELOPMENT_TRACK_GAP_EXPAND_X / 2;
-          }
-        }
-      }
+      const mobileCommonStageShift =
+        node.stage === 1 && node.pathType === 'common' && isMobileViewport ? MOBILE_COMMON_STAGE_SHIFT : 0;
 
       const alignedX = laneKey ? canonicalLaneX.get(laneKey) ?? node.position.x : node.position.x;
 
       aligned.set(node.id, {
-        x: alignedX + baseMobileCommonStageShift + mobileDevelopmentTrackGapShift + mobileDevelopmentCommonCenterShift,
+        x: alignedX + mobileCommonStageShift,
         y: node.position.y,
       });
     });
@@ -392,6 +364,9 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeClick={handleNodeClick}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={true}
           fitView={false}
           fitViewOptions={{ padding: 0.28 }}
           minZoom={0.32}

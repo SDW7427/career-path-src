@@ -16,12 +16,12 @@ const COMMON_NODE_WIDTH = 220;
 const COMMON_X_OFFSET = Math.round((DEFAULT_NODE_WIDTH - COMMON_NODE_WIDTH) / 2);
 
 // Development
-const DEV_WEB_SP_X = 80;
-const DEV_WEB_MG_X = 260;
+const DEV_WEB_SP_X = 60;
+const DEV_WEB_MG_X = 280;
 const DEV_WEB_COMMON_X = Math.round((DEV_WEB_SP_X + DEV_WEB_MG_X) / 2) + COMMON_X_OFFSET;
 
-const DEV_MOBILE_SP_X = 500;
-const DEV_MOBILE_MG_X = 680;
+const DEV_MOBILE_SP_X = 480;
+const DEV_MOBILE_MG_X = 700;
 const DEV_MOBILE_COMMON_X = Math.round((DEV_MOBILE_SP_X + DEV_MOBILE_MG_X) / 2) + COMMON_X_OFFSET;
 
 // Infrastructure

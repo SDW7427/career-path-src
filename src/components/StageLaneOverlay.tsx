@@ -31,21 +31,21 @@ function getGroupHeaders(track: Track): GroupHeader[] {
         {
           label: 'Webアプリケーション',
           centerX: 170,
-          startX: 10,
-          endX: 330,
+          startX: -10,
+          endX: 350,
           lanes: [
-            { label: 'Specialist', x: 80 },
-            { label: 'Manager', x: 260 },
+            { label: 'Specialist', x: 60 },
+            { label: 'Manager', x: 280 },
           ],
         },
         {
           label: 'モバイルアプリ',
           centerX: 590,
-          startX: 430,
-          endX: 750,
+          startX: 410,
+          endX: 770,
           lanes: [
-            { label: 'Specialist', x: 500 },
-            { label: 'Manager', x: 680 },
+            { label: 'Specialist', x: 480 },
+            { label: 'Manager', x: 700 },
           ],
         },
       ];
