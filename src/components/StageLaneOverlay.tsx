@@ -63,8 +63,8 @@ function getGroupHeaders(track: Track, commonStageShiftX: number): GroupHeader[]
       ];
     case 'infrastructure':
       return [
-        dualLaneGroup('サーバー', 60, 280, commonStageShiftX),
-        dualLaneGroup('ネットワーク', 480, 700, commonStageShiftX),
+        dualLaneGroup('サーバー', 40, 300, commonStageShiftX),
+        dualLaneGroup('ネットワーク', 460, 720, commonStageShiftX),
       ];
     case 'it-support':
       return [
