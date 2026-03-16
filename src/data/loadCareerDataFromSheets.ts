@@ -248,6 +248,8 @@ function mergeSheetContentIntoFallback(contentRows: SheetContentRow[]): CareerNo
 }
 
 export async function loadCareerDataFromSheets(): Promise<CareerDataSet> {
+  // Nodes sheet currently overrides content only.
+  // Structural data (positions, relations, and edges) stays in careerData.ts.
   const nodesCsv = await fetchSheetCsv(SHEET_SOURCES.nodesCsvUrl, 'Nodes sheet');
   const nodeRows = validateRequiredHeaders(nodesCsv, REQUIRED_HEADERS, 'Nodes sheet');
   const contentRows = parseContentRows(nodeRows);
