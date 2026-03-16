@@ -63,12 +63,21 @@ function getGroupHeaders(track: Track): GroupHeader[] {
         },
         {
           label: 'ネットワーク',
+<<<<<<< HEAD
           centerX: 570,
           startX: 390,
           endX: 750,
           lanes: [
             { label: 'Specialist', x: 460 },
             { label: 'Manager', x: 680 },
+=======
+          centerX: 650,
+          startX: 470,
+          endX: 830,
+          lanes: [
+            { label: 'Specialist', x: 540 },
+            { label: 'Manager', x: 760 },
+>>>>>>> 397b98fda4aa602f41677ece3920633a6dc00b55
           ],
         },
       ];
