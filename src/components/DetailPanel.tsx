@@ -262,7 +262,8 @@ const CollapsibleGroup: React.FC<{
 const StructuredContent: React.FC<{
   parsed: ParsedStructuredText;
   chipColor?: string;
-}> = ({ parsed, chipColor }) => {
+  itemMode?: 'default' | 'tags';
+}> = ({ parsed, chipColor, itemMode = 'default' }) => {
   return (
     <div className="space-y-3">
       {parsed.sections.map((section, sectionIndex) => {
@@ -272,6 +273,10 @@ const StructuredContent: React.FC<{
 
         const renderItems = (items: string[]) => {
           if (!items.length) return <span className="text-xs text-gray-300">-</span>;
+
+          if (itemMode === 'tags') {
+            return <TagList items={items} color={chipColor ?? 'bg-gray-50 text-gray-700'} wrapLong />;
+          }
 
           if (forceChips) {
             const { chips, notes } = splitDomainItems(items);
@@ -363,6 +368,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
   const skillsStructured = parseStructuredText(node.requiredSkills.join('\n'), { stripLeadingHeading: '必要スキル' });
   const experienceStructured = parseStructuredText(node.requiredExperience.join('\n'), { stripLeadingHeading: '必要経験' });
   const certsStructured = parseStructuredText(node.recommendedCerts.join('\n'), { stripLeadingHeading: '推奨資格' });
+  const toolsStructured = parseStructuredText(node.toolsEnvironmentsLanguages.join('\n'), { stripLeadingHeading: 'ツール・環境・言語' });
 
   const trackColorClass =
     {
@@ -463,7 +469,15 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
       </Section>
 
       <Section title="ツール・環境・言語" accentClass={accent.tools}>
-        <TagList items={node.toolsEnvironmentsLanguages} color="bg-gray-50 text-gray-700" />
+        {toolsStructured ? (
+          <StructuredContent
+            parsed={toolsStructured}
+            chipColor="bg-gray-50 text-gray-700"
+            itemMode="tags"
+          />
+        ) : (
+          <TagList items={node.toolsEnvironmentsLanguages} color="bg-gray-50 text-gray-700" wrapLong />
+        )}
       </Section>
 
       <Section title="次の段階に上がる条件" accentClass={accent.next}>
