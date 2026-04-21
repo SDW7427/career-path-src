@@ -34,19 +34,51 @@ const SUBHEADER_RE = /^[A-Z]\.\s+/;            // A. / B. / C. ...
 // NOTE: "※" は消さない（原文表示したい）ので prefix から除外
 const BULLET_PREFIX_RE = /^[\s・●•▪◦◉◆◇*\-－ー]+/;
 
-const Section: React.FC<{
+/** ステップ番号付きフローセクション */
+const FlowSection: React.FC<{
+  step: number;
   title: string;
+  subtitle: string;
+  stepBg: string;
+  isEmpty: boolean;
   children: React.ReactNode;
-  accentClass?: string;
-}> = ({ title, children, accentClass = 'bg-gray-300' }) => (
-  <div className="mb-5">
-    <div className="flex items-center gap-2 mb-2">
-      <span className={`inline-block w-1.5 h-4 rounded-full ${accentClass}`} />
-      <h4 className="text-sm font-bold text-gray-800 tracking-wide">{title}</h4>
+}> = ({ step, title, subtitle, stepBg, isEmpty, children }) => (
+  <div className="rounded-xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+    <div className="flex items-start gap-2.5 px-3 pt-3 pb-2">
+      <span
+        className={`shrink-0 w-5 h-5 rounded-full ${stepBg} flex items-center justify-center text-[10px] font-bold text-white mt-0.5`}
+      >
+        {step}
+      </span>
+      <div className="min-w-0">
+        <h4 className="text-xs font-bold text-gray-800 leading-tight">{title}</h4>
+        <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{subtitle}</p>
+      </div>
     </div>
-    <div className="bg-white/60 rounded-lg border border-gray-100 p-3">
-      {children}
+    <div className="px-3 pb-3 pt-1 border-t border-gray-50">
+      {isEmpty ? (
+        <span className="text-xs text-gray-300 italic">—</span>
+      ) : (
+        children
+      )}
     </div>
+  </div>
+);
+
+/** セクション間の接続矢印 */
+const FlowConnector: React.FC<{ label: string }> = ({ label }) => (
+  <div className="flex flex-col items-center gap-0.5 my-1.5 select-none">
+    <div className="w-px h-2 bg-gray-200" />
+    <div className="flex items-center gap-1">
+      <div className="h-px w-4 bg-gray-200" />
+      <span className="text-[9px] text-gray-300 px-1.5 py-0.5 bg-gray-50 rounded-full border border-gray-100 whitespace-nowrap">
+        {label}
+      </span>
+      <div className="h-px w-4 bg-gray-200" />
+    </div>
+    <svg width="8" height="5" viewBox="0 0 8 5" className="text-gray-300 mt-0.5">
+      <path d="M0 0 L4 5 L8 0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   </div>
 );
 
@@ -356,6 +388,10 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, isLocked = false }) => 
   const skillsStructured = parseStructuredText(node.requiredSkills.join('\n'), { stripLeadingHeadings: ['必要スキル'] });
   const experienceStructured = parseStructuredText(node.requiredExperience.join('\n'), { stripLeadingHeadings: ['必要経験'] });
 
+  const isRoleEmpty = !roleText.trim();
+  const isSkillsEmpty = node.requiredSkills.length === 0;
+  const isExperienceEmpty = node.requiredExperience.length === 0;
+
   const trackColorClass =
     {
       development: 'bg-blue-500',
@@ -377,20 +413,19 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, isLocked = false }) => 
       common: 'bg-gray-100 text-gray-600',
     }[node.pathType];
 
-  const accent = {
-    role: 'bg-gray-400',
-    skill: trackColorClass,
-    exp: 'bg-gray-400',
-  };
+  const stepBg = trackColorClass;
 
   return (
-    <div className="h-full overflow-y-auto p-5 bg-gradient-to-b from-white to-gray-50">
-      <div className={`${trackColorClass} h-1.5 rounded-full mb-4`} />
+    <div className="h-full overflow-y-auto p-4 bg-gradient-to-b from-white to-gray-50">
+      {/* トップアクセントバー */}
+      <div className={`${trackColorClass} h-1 rounded-full mb-4`} />
 
-      <h2 className="text-lg font-bold text-gray-800 leading-snug mb-2">
+      {/* タイトル */}
+      <h2 className="text-base font-bold text-gray-800 leading-snug mb-2">
         {node.titleJa}
       </h2>
 
+      {/* バッジ行 */}
       <div className="flex flex-wrap gap-1.5 mb-5">
         <span className={`text-xs font-medium px-2 py-0.5 rounded ${trackBadgeClass}`}>
           {TRACK_LABELS[node.track]}
@@ -408,44 +443,73 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, isLocked = false }) => 
         )}
       </div>
 
-      <Section title="役割" accentClass={accent.role}>
+      {/* ━━━ フロー構造 ━━━ */}
+
+      {/* Step 1: 役割 */}
+      <FlowSection
+        step={1}
+        title="役割"
+        subtitle="このステージで担当する責任と役割"
+        stepBg={stepBg}
+        isEmpty={isRoleEmpty}
+      >
         {roleStructured ? (
           <StructuredContent parsed={roleStructured} />
         ) : (
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{roleText}</p>
+          <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-line">{roleText}</p>
         )}
-      </Section>
+      </FlowSection>
 
-      <Section title="スキル" accentClass={accent.skill}>
+      {/* コネクター: 役割 → スキル */}
+      <FlowConnector label="この役割を担うために必要なスキル" />
+
+      {/* Step 2: スキル */}
+      <FlowSection
+        step={2}
+        title="スキル"
+        subtitle="上記の役割を遂行するために求められる能力"
+        stepBg={stepBg}
+        isEmpty={isSkillsEmpty}
+      >
         {skillsStructured ? (
           <StructuredContent parsed={skillsStructured} itemMode="plain-bullets" />
         ) : (
           <BulletList items={node.requiredSkills} />
         )}
-      </Section>
+      </FlowSection>
 
-      <Section title="経験" accentClass={accent.exp}>
+      {/* コネクター: スキル → 経験 */}
+      <FlowConnector label="このスキルを証明する経験として" />
+
+      {/* Step 3: 経験 */}
+      <FlowSection
+        step={3}
+        title="経験"
+        subtitle="スキルを実際に体得したと判断できる経験"
+        stepBg={stepBg}
+        isEmpty={isExperienceEmpty}
+      >
         {experienceStructured ? (
           <StructuredContent parsed={experienceStructured} />
         ) : (
           <BulletList items={node.requiredExperience} />
         )}
-      </Section>
+      </FlowSection>
 
       {/*
         1차 공개판에서는 役割 / スキル / 経験만 핵심 섹션으로 노출한다.
         아래 섹션들은 제거하지 않고 비활성화만 유지한다.
 
-      <Section title="資格" accentClass="bg-emerald-400">...</Section>
-      <Section title="ツール・環境・言語" accentClass="bg-slate-400">...</Section>
-      <Section title="次の段階に上がる条件" accentClass="bg-amber-400">...</Section>
-      <Section title="タグ" accentClass="bg-gray-400">...</Section>
-      <Section title="兼任/分岐メモ" accentClass="bg-amber-400">...</Section>
-      <Section title="兼任可能な役職" accentClass="bg-amber-400">...</Section>
-      <Section title="関連ノード" accentClass="bg-slate-400">...</Section>
+      <FlowSection title="資格" ...>...</FlowSection>
+      <FlowSection title="ツール・環境・言語" ...>...</FlowSection>
+      <FlowSection title="次の段階に上がる条件" ...>...</FlowSection>
+      <FlowSection title="タグ" ...>...</FlowSection>
+      <FlowSection title="兼任/分岐メモ" ...>...</FlowSection>
+      <FlowSection title="兼任可能な役職" ...>...</FlowSection>
+      <FlowSection title="関連ノード" ...>...</FlowSection>
       */}
 
-      <div className="mt-6 pt-3 border-t border-gray-100">
+      <div className="mt-5 pt-3 border-t border-gray-100">
         <p className="text-[10px] text-gray-300">Node ID: {node.id}</p>
       </div>
     </div>
