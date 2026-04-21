@@ -60,6 +60,8 @@ const App: React.FC = () => {
   } = useCareerPathState(data?.nodes ?? [], data?.edges ?? []);
 
   const isSelectedNodeLocked = (selectedNode?.stage ?? 0) >= 5;
+
+  const handleGraphNodeClick = (nodeId: string) => {
     handleNodeClick(nodeId);
     setIsMobileDetailOpen(true);
   };
