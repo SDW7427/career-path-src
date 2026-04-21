@@ -92,7 +92,7 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
         (n) =>
           n.titleJa.toLowerCase().includes(q) ||
           n.shortLabel.toLowerCase().includes(q) ||
-          n.summary.toLowerCase().includes(q) ||
+          (n.role ?? n.summary ?? '').toLowerCase().includes(q) ||
           n.requiredSkills.some((s) => s.toLowerCase().includes(q)) ||
           n.tags.some((t) => t.toLowerCase().includes(q)) ||
           n.recommendedCerts.some((c) => c.toLowerCase().includes(q)) ||
