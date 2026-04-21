@@ -262,13 +262,13 @@ const CollapsibleGroup: React.FC<{
 const StructuredContent: React.FC<{
   parsed: ParsedStructuredText;
   chipColor?: string;
-  itemMode?: 'default' | 'tags';
+  itemMode?: 'default' | 'tags' | 'plain-bullets';
 }> = ({ parsed, chipColor, itemMode = 'default' }) => {
   return (
     <div className="space-y-3">
       {parsed.sections.map((section, sectionIndex) => {
-        const forceChips = FORCE_CHIP_SECTIONS.has(section.title);
-        const emphasize = isEmphasizedSubtitle(section.title);
+        const forceChips = itemMode !== 'plain-bullets' && FORCE_CHIP_SECTIONS.has(section.title);
+        const emphasize = itemMode !== 'plain-bullets' && isEmphasizedSubtitle(section.title);
         const collapsibleGroups = isCollapsibleGroupSection(section.title);
 
         const renderItems = (items: string[]) => {
@@ -446,9 +446,9 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
 
       <Section title="スキル" accentClass={accent.skill}>
         {skillsStructured ? (
-          <StructuredContent parsed={skillsStructured} chipColor="bg-blue-50 text-blue-700" />
+          <StructuredContent parsed={skillsStructured} itemMode="plain-bullets" />
         ) : (
-          <TagList items={node.requiredSkills} color="bg-blue-50 text-blue-700" wrapLong />
+          <BulletList items={node.requiredSkills} />
         )}
       </Section>
 
