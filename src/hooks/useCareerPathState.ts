@@ -66,8 +66,14 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
   }, []);
 
   const filteredNodes: CareerNode[] = useMemo(() => {
-    // 公開版ポリシー: Managerトラックは非表示（削除ではなく非公開）
-    let nodes = allNodes.filter((n) => n.track === activeTrack && n.pathType !== 'manager');
+    // 公開版ポリシー:
+    // - 開発・インフラ: Manager トラックは非公開（削除ではなく非公開）
+    // - IT サポート: 全ノードが pathType:'manager' のため Manager フィルタ適用外
+    let nodes = allNodes.filter((n) => {
+      if (n.track !== activeTrack) return false;
+      if (n.track === 'it-support') return true;
+      return n.pathType !== 'manager';
+    });
 
     if (activeSubtrack !== 'all' && hasTrackSubtrackData) {
       nodes = nodes.filter((n) => n.subtrack === activeSubtrack);

@@ -29,7 +29,7 @@ interface SkillTreeGraphProps {
   showControls?: boolean;
 }
 
-const MOBILE_COMMON_STAGE_SHIFT = 4;
+const MOBILE_COMMON_STAGE_SHIFT = 0; // 全ノード同幅・同位置になったためシフト不要
 
 // Keep every vertical lane on one exact x-axis.
 // For infra / IT support, use the lowest available stage in the lane as the canonical anchor.
