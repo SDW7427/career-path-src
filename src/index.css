@@ -212,6 +212,33 @@ html, body, #root {
 }
 
 /* ============================================================
+   Locked node styles (5〜6段階: 公開予定)
+   ============================================================ */
+
+.career-node.locked {
+  opacity: 0.42;
+  filter: grayscale(0.4);
+  border-style: dashed;
+  cursor: pointer;
+}
+
+.career-node.locked:hover {
+  opacity: 0.58;
+  transform: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.career-node.locked .node-title {
+  color: #94a3b8;
+}
+
+.career-node.locked .lock-icon {
+  font-size: 10px;
+  margin-left: 2px;
+  opacity: 0.8;
+}
+
+/* ============================================================
    Scrollbar styling
    ============================================================ */
 

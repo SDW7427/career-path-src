@@ -66,7 +66,8 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
   }, []);
 
   const filteredNodes: CareerNode[] = useMemo(() => {
-    let nodes = allNodes.filter((n) => n.track === activeTrack);
+    // 公開版ポリシー: Managerトラックは非表示（削除ではなく非公開）
+    let nodes = allNodes.filter((n) => n.track === activeTrack && n.pathType !== 'manager');
 
     if (activeSubtrack !== 'all' && hasTrackSubtrackData) {
       nodes = nodes.filter((n) => n.subtrack === activeSubtrack);
@@ -74,14 +75,11 @@ export function useCareerPathState(allNodes: CareerNode[], allEdges: CareerEdge[
 
     if (!activeFilters.has('all')) {
       const filterTypes = activeFilters as Set<PathType>;
-      const hasSpecialistOrManager =
-        filterTypes.has('specialist') || filterTypes.has('manager');
 
-      // 「Specialist」または「Manager」を選んだ場合は、共通ノードも一緒に表示する
-      // （共通ノードがないと経路が途切れて見えるため）
+      // Managerは常に非表示のため、specialistフィルター時も共通ノードを維持する
       nodes = nodes.filter((n) => {
         if (filterTypes.has(n.pathType)) return true;
-        if (n.pathType === 'common' && hasSpecialistOrManager) return true;
+        if (n.pathType === 'common' && filterTypes.has('specialist')) return true;
         return false;
       });
     }

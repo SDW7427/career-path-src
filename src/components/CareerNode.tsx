@@ -14,6 +14,7 @@ export interface CareerNodeData {
   styleKey?: string;
   isSelected: boolean;
   isConnected: boolean;
+  isLocked: boolean;
   [key: string]: unknown;
 }
 
@@ -32,6 +33,7 @@ const CareerNodeComponent: React.FC<NodeProps> = ({ data }) => {
     styleKey,
     isSelected,
     isConnected,
+    isLocked,
   } = data as unknown as CareerNodeData;
 
   const classes = [
@@ -39,6 +41,7 @@ const CareerNodeComponent: React.FC<NodeProps> = ({ data }) => {
     `track-${track}`,
     `path-${pathType}`,
     `stage-${stage}`,
+    isLocked ? 'locked' : '',
     isSelected ? 'selected' : '',
     isConnected ? 'connected' : '',
     styleKey ? `style-${styleKey}` : '',
@@ -59,10 +62,13 @@ const CareerNodeComponent: React.FC<NodeProps> = ({ data }) => {
         {pathType === 'common' ? (
           <>
             <span className="path-badge">{PATH_TYPE_LABELS.specialist}</span>
-            <span className="path-badge">{PATH_TYPE_LABELS.manager}</span>
           </>
         ) : (
           <span className="path-badge">{PATH_TYPE_LABELS[pathType as PathType]}</span>
+        )}
+
+        {isLocked && (
+          <span className="lock-icon" aria-label="公開予定">🔒</span>
         )}
       </div>
 

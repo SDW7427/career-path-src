@@ -146,6 +146,7 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         styleKey: cn.styleKey,
         isSelected: cn.id === selectedNodeId,
         isConnected: connectedNodeIds.has(cn.id),
+        isLocked: cn.stage >= 5,
       } satisfies CareerNodeData,
     }));
   }, [careerNodes, selectedNodeId, connectedNodeIds, alignedNodePositions]);

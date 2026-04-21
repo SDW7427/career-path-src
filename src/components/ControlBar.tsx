@@ -11,7 +11,6 @@ export interface ControlBarProps {
 const FILTER_OPTIONS: { key: PathType | 'all'; label: string }[] = [
   { key: 'all', label: 'すべて' },
   { key: 'specialist', label: PATH_TYPE_LABELS.specialist },
-  { key: 'manager', label: PATH_TYPE_LABELS.manager },
   { key: 'common', label: PATH_TYPE_LABELS.common },
 ];
 
@@ -82,20 +81,12 @@ export const ControlBarContent: React.FC<ControlBarProps & { showLegend?: boolea
             Specialist
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-sm bg-yellow-50 border border-amber-300 border-dashed inline-block" />
-            Manager
-          </span>
-          <span className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded-sm bg-gray-50 border border-gray-300 inline-block" />
             共通
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-5 h-px bg-gray-400 inline-block" style={{ borderTop: '1.5px dashed #94a3b8' }} />
-            兼任可
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-5 h-px inline-block" style={{ borderTop: '1.5px dashed #f59e0b' }} />
-            クロストラック
+            <span className="text-[10px]">🔒</span>
+            公開予定
           </span>
         </div>
       )}

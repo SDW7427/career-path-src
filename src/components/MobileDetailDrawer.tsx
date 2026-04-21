@@ -5,6 +5,7 @@ import type { CareerNode } from '../types/career';
 interface MobileDetailDrawerProps {
   open: boolean;
   node: CareerNode | null;
+  isLocked?: boolean;
   onClose: () => void;
   onNodeClick: (nodeId: string) => void;
   getNodeById: (nodeId: string) => CareerNode | undefined;
@@ -13,6 +14,7 @@ interface MobileDetailDrawerProps {
 const MobileDetailDrawer: React.FC<MobileDetailDrawerProps> = ({
   open,
   node,
+  isLocked = false,
   onClose,
   onNodeClick,
   getNodeById,
@@ -66,7 +68,7 @@ const MobileDetailDrawer: React.FC<MobileDetailDrawerProps> = ({
         </div>
 
         <div className="h-[calc(70vh-4rem)] overflow-y-auto">
-          <DetailPanel node={node} onNodeClick={onNodeClick} getNodeById={getNodeById} />
+          <DetailPanel node={node} isLocked={isLocked} onNodeClick={onNodeClick} getNodeById={getNodeById} />
         </div>
       </section>
     </>

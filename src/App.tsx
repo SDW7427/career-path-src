@@ -59,7 +59,7 @@ const App: React.FC = () => {
     getNodeById,
   } = useCareerPathState(data?.nodes ?? [], data?.edges ?? []);
 
-  const handleGraphNodeClick = (nodeId: string) => {
+  const isSelectedNodeLocked = (selectedNode?.stage ?? 0) >= 5;
     handleNodeClick(nodeId);
     setIsMobileDetailOpen(true);
   };
@@ -248,6 +248,7 @@ const App: React.FC = () => {
             <div className="flex-[1] min-w-[320px] max-w-[420px] bg-white border-l border-gray-100">
               <DetailPanel
                 node={selectedNode}
+                isLocked={isSelectedNodeLocked}
                 onNodeClick={handleGraphNodeClick}
                 getNodeById={getNodeById}
               />
@@ -271,6 +272,7 @@ const App: React.FC = () => {
             <MobileDetailDrawer
               open={isMobileDetailOpen}
               node={selectedNode}
+              isLocked={isSelectedNodeLocked}
               onClose={() => setIsMobileDetailOpen(false)}
               onNodeClick={handleGraphNodeClick}
               getNodeById={getNodeById}

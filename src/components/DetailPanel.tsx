@@ -9,6 +9,7 @@ import {
 
 interface DetailPanelProps {
   node: CareerNode | null;
+  isLocked?: boolean;
   onNodeClick: (nodeId: string) => void;
   getNodeById: (nodeId: string) => CareerNode | undefined;
 }
@@ -280,7 +281,7 @@ const StructuredContent: React.FC<{
   );
 };
 
-const DetailPanel: React.FC<DetailPanelProps> = ({ node }) => {
+const DetailPanel: React.FC<DetailPanelProps> = ({ node, isLocked = false }) => {
   if (!node) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-center p-6">
@@ -294,6 +295,57 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node }) => {
           <p>💡 マウスホイールでズーム</p>
           <p>💡 ドラッグで移動</p>
           <p>💡 タブで軸を切り替え</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ロック状態パネル（5〜6段階）
+  if (isLocked) {
+    const trackColorClass =
+      {
+        development: 'bg-blue-500',
+        infrastructure: 'bg-cyan-500',
+        'it-support': 'bg-violet-500',
+      }[node.track];
+
+    const trackBadgeClass =
+      {
+        development: 'bg-blue-100 text-blue-700',
+        infrastructure: 'bg-cyan-100 text-cyan-700',
+        'it-support': 'bg-violet-100 text-violet-700',
+      }[node.track];
+
+    return (
+      <div className="h-full overflow-y-auto p-5 bg-gradient-to-b from-white to-gray-50">
+        <div className={`${trackColorClass} h-1.5 rounded-full mb-4 opacity-30`} />
+
+        <h2 className="text-lg font-bold text-gray-400 leading-snug mb-2">
+          {node.titleJa}
+        </h2>
+
+        <div className="flex flex-wrap gap-1.5 mb-6">
+          <span className={`text-xs font-medium px-2 py-0.5 rounded opacity-50 ${trackBadgeClass}`}>
+            {TRACK_LABELS[node.track]}
+          </span>
+          <span className="text-xs font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-400 opacity-50">
+            {STAGE_LABELS[node.stage as Stage]}
+          </span>
+        </div>
+
+        <div className="flex flex-col items-center justify-center text-center py-10 px-4">
+          <div className="text-4xl mb-4">🔒</div>
+          <h3 className="text-sm font-semibold text-gray-500 mb-2">
+            上位段階は追って公開予定です
+          </h3>
+          <p className="text-xs text-gray-400 leading-relaxed max-w-[220px]">
+            現在は1〜4段階を中心に公開しています。
+            5段階以上の詳細は順次公開予定です。
+          </p>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-gray-100">
+          <p className="text-[10px] text-gray-300">Node ID: {node.id}</p>
         </div>
       </div>
     );
