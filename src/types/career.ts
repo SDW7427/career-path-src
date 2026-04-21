@@ -83,8 +83,14 @@ export interface CareerNode {
   /** Short label for graph node display */
   shortLabel: string;
 
-  /** 1-2 line summary of the role */
-  summary: string;
+  /** Main role/overview content shown in the detail panel's 概要 section */
+  role: string;
+
+  /**
+   * @deprecated Use `role` instead.
+   * Kept temporarily for backward compatibility while sheet/content migration completes.
+   */
+  summary?: string;
 
   /** Required skills list */
   requiredSkills: string[];
