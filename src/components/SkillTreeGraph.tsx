@@ -35,8 +35,14 @@ const MOBILE_COMMON_STAGE_SHIFT = 4;
 // For infra / IT support, use the lowest available stage in the lane as the canonical anchor.
 
 function getLaneAlignmentKey(node: CareerNodeType): string | null {
-  if (node.track === 'infrastructure' && (node.pathType === 'specialist' || node.pathType === 'manager')) {
-    return `${node.track}::${node.subtrack ?? ''}::${node.pathType}`;
+  if (node.track === 'infrastructure') {
+    if (node.pathType === 'specialist' || node.pathType === 'manager') {
+      return `${node.track}::${node.subtrack ?? ''}::specialist`;
+    }
+    // common ノードも specialist レーンに揃える（1軸表示のため）
+    if (node.pathType === 'common') {
+      return `${node.track}::${node.subtrack ?? ''}::specialist`;
+    }
   }
 
   if (node.track === 'it-support') {
@@ -179,7 +185,12 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         sourceNode.stage !== targetNode.stage &&
         sourceNode.track === targetNode.track &&
         sourceNode.subtrack === targetNode.subtrack &&
-        (sourceNode.track === 'it-support' || sourceNode.pathType === targetNode.pathType);
+        (
+          sourceNode.track === 'it-support' ||
+          sourceNode.pathType === targetNode.pathType ||
+          // common(段階1) → specialist(段階2) の直線フロー
+          (sourceNode.pathType === 'common' && targetNode.pathType === 'specialist')
+        );
 
       const isAlignedVerticalLane =
         isVerticalLaneProgression &&
