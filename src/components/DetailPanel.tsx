@@ -34,6 +34,50 @@ const SUBHEADER_RE = /^[A-Z]\.\s+/;            // A. / B. / C. ...
 // NOTE: "※" は消さない（原文表示したい）ので prefix から除外
 const BULLET_PREFIX_RE = /^[\s・●•▪◦◉◆◇*\-－ー]+/;
 
+/**
+ * スキルと経験を 1:1 ペアで表示する。
+ * skills[i] と experiences[i] が対応する前提でデータが整備されていること。
+ * 片方のみ存在する項目も末尾に表示する。
+ */
+const SkillExperiencePairList: React.FC<{
+  skills: string[];
+  experiences: string[];
+  accentClass: string;
+}> = ({ skills, experiences, accentClass }) => {
+  const len = Math.max(skills.length, experiences.length);
+  if (len === 0) {
+    return <span className="text-xs text-gray-300 italic">—</span>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {Array.from({ length: len }, (_, i) => {
+        const skill = skills[i];
+        const exp = experiences[i];
+        return (
+          <div
+            key={i}
+            className="rounded-lg border border-gray-100 bg-white overflow-hidden"
+          >
+            {skill && (
+              <div className="flex items-start gap-2 px-3 py-2">
+                <span className={`shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 ${accentClass}`} />
+                <span className="text-xs text-gray-700 leading-relaxed">{skill}</span>
+              </div>
+            )}
+            {exp && (
+              <div className="flex items-start gap-2 px-3 py-2 bg-gray-50/70 border-t border-dashed border-gray-100">
+                <span className="shrink-0 text-[10px] text-gray-400 mt-0.5 leading-none select-none">└</span>
+                <span className="text-[11px] text-gray-500 leading-relaxed">{exp}</span>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 /** ステップ番号付きフローセクション */
 const FlowSection: React.FC<{
   step: number;
@@ -385,12 +429,9 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, isLocked = false }) => 
 
   const roleText = node.role ?? node.summary ?? '';
   const roleStructured = parseStructuredText(roleText, { stripLeadingHeadings: ['概要', '役割'] });
-  const skillsStructured = parseStructuredText(node.requiredSkills.join('\n'), { stripLeadingHeadings: ['必要スキル'] });
-  const experienceStructured = parseStructuredText(node.requiredExperience.join('\n'), { stripLeadingHeadings: ['必要経験'] });
 
   const isRoleEmpty = !roleText.trim();
-  const isSkillsEmpty = node.requiredSkills.length === 0;
-  const isExperienceEmpty = node.requiredExperience.length === 0;
+  const isPairsEmpty = node.requiredSkills.length === 0 && node.requiredExperience.length === 0;
 
   const trackColorClass =
     {
@@ -460,53 +501,32 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, isLocked = false }) => 
         )}
       </FlowSection>
 
-      {/* コネクター: 役割 → スキル */}
-      <FlowConnector label="この役割を担うために必要なスキル" />
+      {/* コネクター: 役割 → スキル×経験 */}
+      <FlowConnector label="この役割を担うために必要なスキルと経験" />
 
-      {/* Step 2: スキル */}
+      {/* Step 2: スキル × 経験（1:1ペア） */}
       <FlowSection
         step={2}
-        title="スキル"
-        subtitle="上記の役割を遂行するために求められる能力"
+        title="スキル × 経験"
+        subtitle="各スキルと、それを証明する経験の対応"
         stepBg={stepBg}
-        isEmpty={isSkillsEmpty}
+        isEmpty={isPairsEmpty}
       >
-        {skillsStructured ? (
-          <StructuredContent parsed={skillsStructured} itemMode="plain-bullets" />
-        ) : (
-          <BulletList items={node.requiredSkills} />
-        )}
-      </FlowSection>
-
-      {/* コネクター: スキル → 経験 */}
-      <FlowConnector label="このスキルを証明する経験として" />
-
-      {/* Step 3: 経験 */}
-      <FlowSection
-        step={3}
-        title="経験"
-        subtitle="スキルを実際に体得したと判断できる経験"
-        stepBg={stepBg}
-        isEmpty={isExperienceEmpty}
-      >
-        {experienceStructured ? (
-          <StructuredContent parsed={experienceStructured} />
-        ) : (
-          <BulletList items={node.requiredExperience} />
-        )}
+        <SkillExperiencePairList
+          skills={node.requiredSkills}
+          experiences={node.requiredExperience}
+          accentClass={stepBg}
+        />
       </FlowSection>
 
       {/*
-        1차 공개판에서는 役割 / スキル / 経験만 핵심 섹션으로 노출한다.
+        1차 공개판에서는 役割 / スキル×経験만 핵심 섹션으로 노출한다.
         아래 섹션들은 제거하지 않고 비활성화만 유지한다.
 
       <FlowSection title="資格" ...>...</FlowSection>
       <FlowSection title="ツール・環境・言語" ...>...</FlowSection>
       <FlowSection title="次の段階に上がる条件" ...>...</FlowSection>
       <FlowSection title="タグ" ...>...</FlowSection>
-      <FlowSection title="兼任/分岐メモ" ...>...</FlowSection>
-      <FlowSection title="兼任可能な役職" ...>...</FlowSection>
-      <FlowSection title="関連ノード" ...>...</FlowSection>
       */}
 
       <div className="mt-5 pt-3 border-t border-gray-100">

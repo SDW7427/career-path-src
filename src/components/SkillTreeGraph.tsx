@@ -145,7 +145,7 @@ const SkillTreeGraph: React.FC<SkillTreeGraphProps> = ({
         subtrack: cn.subtrack,
         styleKey: cn.styleKey,
         isSelected: cn.id === selectedNodeId,
-        isConnected: connectedNodeIds.has(cn.id),
+        isConnected: false, // 隣接ノードのハイライト表示は無効化
         isLocked: cn.stage >= 5,
       } satisfies CareerNodeData,
     }));
