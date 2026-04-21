@@ -129,7 +129,7 @@ type SheetContentRow = {
   id: string;
   titleJa: string;
   shortLabel: string;
-  summary: string;
+  role: string;
   requiredSkills: string[];
   requiredExperience: string[];
   recommendedCerts: string[];
@@ -181,7 +181,7 @@ function parseContentRows(rows: Record<string, string>[]): SheetContentRow[] {
       id,
       titleJa,
       shortLabel,
-      summary: (row.summary ?? '').trim(),
+      role: (row.role ?? '').trim(),
       requiredSkills: splitList(row.requiredSkills),
       requiredExperience: splitList(row.requiredExperience),
       recommendedCerts: splitList(row.recommendedCerts),
@@ -235,7 +235,8 @@ function mergeSheetContentIntoFallback(contentRows: SheetContentRow[]): CareerNo
       ...fallbackNode,
       titleJa: content.titleJa,
       shortLabel: content.shortLabel,
-      summary: content.summary,
+      role: content.role,
+      summary: content.role,
       requiredSkills: content.requiredSkills,
       requiredExperience: content.requiredExperience,
       recommendedCerts: content.recommendedCerts,
