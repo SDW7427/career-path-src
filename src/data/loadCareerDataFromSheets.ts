@@ -177,11 +177,13 @@ function parseContentRows(rows: Record<string, string>[]): SheetContentRow[] {
 
     seenIds.add(id);
 
+    const role = (row.role ?? row.summary ?? '').trim();
+
     parsed.push({
       id,
       titleJa,
       shortLabel,
-      role: (row.role ?? '').trim(),
+      role,
       requiredSkills: splitList(row.requiredSkills),
       requiredExperience: splitList(row.requiredExperience),
       recommendedCerts: splitList(row.recommendedCerts),
@@ -235,8 +237,8 @@ function mergeSheetContentIntoFallback(contentRows: SheetContentRow[]): CareerNo
       ...fallbackNode,
       titleJa: content.titleJa,
       shortLabel: content.shortLabel,
-      role: content.role,
-      summary: content.role,
+      role: content.role || fallbackNode.role || fallbackNode.summary || '',
+      summary: content.role || fallbackNode.summary,
       requiredSkills: content.requiredSkills,
       requiredExperience: content.requiredExperience,
       recommendedCerts: content.recommendedCerts,
