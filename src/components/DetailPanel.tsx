@@ -49,32 +49,6 @@ const Section: React.FC<{
   </div>
 );
 
-/** TagList */
-const TagList: React.FC<{ items: string[]; color?: string; wrapLong?: boolean }> = ({
-  items,
-  color = 'bg-gray-100 text-gray-700',
-  wrapLong = false,
-}) => {
-  if (!items.length) return <span className="text-xs text-gray-300">-</span>;
-
-  return (
-    <div className="flex flex-wrap gap-1 min-w-0">
-      {items.map((item, i) => (
-        <span
-          key={i}
-          className={[
-            'inline-block text-xs px-2 py-0.5 rounded-md',
-            color,
-            wrapLong ? 'whitespace-normal break-words max-w-full leading-snug' : '',
-          ].join(' ')}
-        >
-          {item}
-        </span>
-      ))}
-    </div>
-  );
-};
-
 /** Bullet list (for normal sentences) */
 const BulletList: React.FC<{ items: string[] }> = ({ items }) => {
   if (!items.length) return <span className="text-xs text-gray-300">-</span>;
@@ -108,7 +82,7 @@ function normalizeLine(line: string): string {
   return line.replace(BULLET_PREFIX_RE, '').trim();
 }
 
-function preprocessText(text: string, stripLeadingHeading?: string): string {
+function preprocessText(text: string, stripLeadingHeadings?: string[]): string {
   const rawLines = (text ?? '')
     .replace(/\r\n/g, '\n')
     .split('\n')
@@ -116,8 +90,8 @@ function preprocessText(text: string, stripLeadingHeading?: string): string {
 
   while (rawLines.length && !rawLines[0]) rawLines.shift();
 
-  if (stripLeadingHeading && rawLines.length) {
-    if (rawLines[0] === stripLeadingHeading) {
+  if (stripLeadingHeadings?.length && rawLines.length) {
+    while (rawLines.length && stripLeadingHeadings.includes(rawLines[0])) {
       rawLines.shift();
       while (rawLines.length && !rawLines[0]) rawLines.shift();
     }
@@ -128,9 +102,9 @@ function preprocessText(text: string, stripLeadingHeading?: string): string {
 
 function parseStructuredText(
   text: string,
-  options?: { stripLeadingHeading?: string }
+  options?: { stripLeadingHeadings?: string[] }
 ): ParsedStructuredText | null {
-  const preprocessed = preprocessText(text, options?.stripLeadingHeading);
+  const preprocessed = preprocessText(text, options?.stripLeadingHeadings);
 
   const lines = preprocessed
     .split(/\r?\n/)
@@ -194,14 +168,6 @@ function parseStructuredText(
   return { sections };
 }
 
-/** 対応ドメイン例：用語は全部チップ、ただし「※」行は注記として原文表示 */
-const FORCE_CHIP_SECTIONS = new Set(['対応ドメイン例']);
-function splitDomainItems(items: string[]) {
-  const notes = items.filter((x) => x.startsWith('※'));
-  const chips = items.filter((x) => !x.startsWith('※'));
-  return { chips, notes };
-}
-
 /** “ソタイトル(セクション見出し)”として目立たせたいタイトル */
 const EMPHASIZE_SUBTITLE_EXACT = new Set([
   '役割',
@@ -246,7 +212,6 @@ const CollapsibleGroup: React.FC<{
         'inline-flex items-center gap-2',
         'text-xs font-semibold text-gray-700',
         'bg-gray-50 border border-gray-100 rounded px-2 py-1',
-        // hide default marker
         'list-none [&::-webkit-details-marker]:hidden',
       ].join(' ')}
     >
@@ -261,45 +226,17 @@ const CollapsibleGroup: React.FC<{
 
 const StructuredContent: React.FC<{
   parsed: ParsedStructuredText;
-  chipColor?: string;
-  itemMode?: 'default' | 'tags' | 'plain-bullets';
-}> = ({ parsed, chipColor, itemMode = 'default' }) => {
+  itemMode?: 'default' | 'plain-bullets';
+}> = ({ parsed, itemMode = 'default' }) => {
   return (
     <div className="space-y-3">
       {parsed.sections.map((section, sectionIndex) => {
-        const forceChips = itemMode !== 'plain-bullets' && FORCE_CHIP_SECTIONS.has(section.title);
         const emphasize = itemMode !== 'plain-bullets' && isEmphasizedSubtitle(section.title);
         const collapsibleGroups = isCollapsibleGroupSection(section.title);
 
         const renderItems = (items: string[]) => {
           if (!items.length) return <span className="text-xs text-gray-300">-</span>;
-
-          if (itemMode === 'tags') {
-            return <TagList items={items} color={chipColor ?? 'bg-gray-50 text-gray-700'} wrapLong />;
-          }
-
-          if (forceChips) {
-            const { chips, notes } = splitDomainItems(items);
-            return (
-              <div className="space-y-2">
-                {chips.length > 0 && (
-                  <TagList items={chips} color={chipColor} wrapLong />
-                )}
-                {notes.map((n, i) => (
-                  <p
-                    key={i}
-                    className="text-xs text-gray-600 leading-relaxed whitespace-pre-line bg-gray-50 border border-gray-100 rounded px-2 py-1"
-                  >
-                    {n}
-                  </p>
-                ))}
-              </div>
-            );
-          }
-
-          // 강조 소제목은 “콜아웃 리스트” 스타일로 구분
           if (emphasize) return <SubsectionList items={items} />;
-
           return <BulletList items={items} />;
         };
 
@@ -317,7 +254,6 @@ const StructuredContent: React.FC<{
             {section.groups.map((group, groupIndex) => {
               const body = renderItems(group.items);
 
-              // ✅ 분야별(A/B/C/D) 같은 그룹이 있는 섹션은 아코디언으로 렌더
               if (collapsibleGroups) {
                 return (
                   <div key={`${group.title}-${groupIndex}`} className="space-y-1.5">
@@ -328,7 +264,6 @@ const StructuredContent: React.FC<{
                 );
               }
 
-              // 일반 그룹은 그대로
               return (
                 <div key={`${group.title}-${groupIndex}`} className="space-y-1.5">
                   <div className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-100 rounded px-2 py-1">
@@ -345,7 +280,7 @@ const StructuredContent: React.FC<{
   );
 };
 
-const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeById }) => {
+const DetailPanel: React.FC<DetailPanelProps> = ({ node }) => {
   if (!node) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-center p-6">
@@ -364,9 +299,10 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
     );
   }
 
-  const roleStructured = parseStructuredText(node.role ?? node.summary ?? '', { stripLeadingHeading: '概要' });
-  const skillsStructured = parseStructuredText(node.requiredSkills.join('\n'), { stripLeadingHeading: '必要スキル' });
-  const experienceStructured = parseStructuredText(node.requiredExperience.join('\n'), { stripLeadingHeading: '必要経験' });
+  const roleText = node.role ?? node.summary ?? '';
+  const roleStructured = parseStructuredText(roleText, { stripLeadingHeadings: ['概要', '役割'] });
+  const skillsStructured = parseStructuredText(node.requiredSkills.join('\n'), { stripLeadingHeadings: ['必要スキル'] });
+  const experienceStructured = parseStructuredText(node.requiredExperience.join('\n'), { stripLeadingHeadings: ['必要経験'] });
 
   const trackColorClass =
     {
@@ -390,20 +326,10 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
     }[node.pathType];
 
   const accent = {
-    summary: 'bg-gray-400',
+    role: 'bg-gray-400',
     skill: trackColorClass,
     exp: 'bg-gray-400',
-    coexist: 'bg-amber-400',
-    related: 'bg-slate-400',
   };
-
-  const relatedNodes = (node.relatedNodeIds || [])
-    .map((id) => getNodeById(id))
-    .filter(Boolean) as CareerNode[];
-
-  const coexistNodes = (node.canCoexistWith || [])
-    .map((id) => getNodeById(id))
-    .filter(Boolean) as CareerNode[];
 
   return (
     <div className="h-full overflow-y-auto p-5 bg-gradient-to-b from-white to-gray-50">
@@ -430,11 +356,11 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
         )}
       </div>
 
-      <Section title="概要" accentClass={accent.summary}>
+      <Section title="役割" accentClass={accent.role}>
         {roleStructured ? (
           <StructuredContent parsed={roleStructured} />
         ) : (
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{node.role ?? node.summary ?? ''}</p>
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{roleText}</p>
         )}
       </Section>
 
@@ -455,71 +381,17 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
       </Section>
 
       {/*
-        1차 공개판에서는 概要 / スキル / 経験만 핵심 섹션으로 노출한다.
+        1차 공개판에서는 役割 / スキル / 経験만 핵심 섹션으로 노출한다.
         아래 섹션들은 제거하지 않고 비활성화만 유지한다.
 
-      <Section title="資格" accentClass="bg-emerald-400">
-        ...
-      </Section>
-
-      <Section title="ツール・環境・言語" accentClass="bg-slate-400">
-        ...
-      </Section>
-
-      <Section title="次の段階に上がる条件" accentClass="bg-amber-400">
-        ...
-      </Section>
-
-      {node.tags.length > 0 && (
-        <Section title="タグ" accentClass="bg-gray-400">
-          ...
-        </Section>
-      )}
+      <Section title="資格" accentClass="bg-emerald-400">...</Section>
+      <Section title="ツール・環境・言語" accentClass="bg-slate-400">...</Section>
+      <Section title="次の段階に上がる条件" accentClass="bg-amber-400">...</Section>
+      <Section title="タグ" accentClass="bg-gray-400">...</Section>
+      <Section title="兼任/分岐メモ" accentClass="bg-amber-400">...</Section>
+      <Section title="兼任可能な役職" accentClass="bg-amber-400">...</Section>
+      <Section title="関連ノード" accentClass="bg-slate-400">...</Section>
       */}
-
-      {node.branchNote && (
-        <Section title="兼任/分岐メモ" accentClass="bg-amber-400">
-          <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1 whitespace-pre-line border border-amber-100">
-            {node.branchNote}
-          </p>
-        </Section>
-      )}
-
-      {coexistNodes.length > 0 && (
-        <Section title="兼任可能な役職" accentClass={accent.coexist}>
-          <div className="space-y-1.5">
-            {coexistNodes.map((cn) => (
-              <button
-                key={cn.id}
-                onClick={() => onNodeClick(cn.id)}
-                className="block w-full text-left text-xs px-3 py-2 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors border border-amber-100"
-              >
-                <span className="font-semibold">{cn.shortLabel}</span>
-                <span className="text-[11px] text-amber-700">（{STAGE_LABELS[cn.stage as Stage]}）</span>
-              </button>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {relatedNodes.length > 0 && (
-        <Section title="関連ノード" accentClass={accent.related}>
-          <div className="space-y-1.5">
-            {relatedNodes.map((rn) => (
-              <button
-                key={rn.id}
-                onClick={() => onNodeClick(rn.id)}
-                className="block w-full text-left text-xs px-3 py-2 rounded-lg bg-gray-50 text-gray-800 hover:bg-gray-100 transition-colors border border-gray-100"
-              >
-                <span className="font-semibold">{rn.shortLabel}</span>
-                <span className="text-[11px] text-gray-600">
-                  （{TRACK_LABELS[rn.track]} / {STAGE_LABELS[rn.stage as Stage]}）
-                </span>
-              </button>
-            ))}
-          </div>
-        </Section>
-      )}
 
       <div className="mt-6 pt-3 border-t border-gray-100">
         <p className="text-[10px] text-gray-300">Node ID: {node.id}</p>
