@@ -35,14 +35,8 @@ const MOBILE_COMMON_STAGE_SHIFT = 4;
 // For infra / IT support, use the lowest available stage in the lane as the canonical anchor.
 
 function getLaneAlignmentKey(node: CareerNodeType): string | null {
-  if (node.track === 'infrastructure') {
-    if (node.pathType === 'specialist' || node.pathType === 'manager') {
-      return `${node.track}::${node.subtrack ?? ''}::specialist`;
-    }
-    // common ノードも specialist レーンに揃える（1軸表示のため）
-    if (node.pathType === 'common') {
-      return `${node.track}::${node.subtrack ?? ''}::specialist`;
-    }
+  if (node.track === 'infrastructure' && (node.pathType === 'specialist' || node.pathType === 'manager')) {
+    return `${node.track}::${node.subtrack ?? ''}::specialist`;
   }
 
   if (node.track === 'it-support') {

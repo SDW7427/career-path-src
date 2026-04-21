@@ -10,15 +10,15 @@ const stageY = (stage: number) => BASE_Y + (6 - stage) * STAGE_Y_GAP;
 
 const STAGES = [1, 2, 3, 4, 5, 6] as const;
 
-const DEFAULT_NODE_WIDTH = 140;
-const COMMON_NODE_WIDTH = 220;
-/** 공통 노드를 시각적 중앙에 맞추기 위한 left offset */
-const COMMON_X_OFFSET = Math.round((DEFAULT_NODE_WIDTH - COMMON_NODE_WIDTH) / 2);
+const DEFAULT_NODE_WIDTH = 200;
+const COMMON_NODE_WIDTH = 200;  // 全ノード同幅
+/** 全ノード同幅のためオフセット不要 */
+const COMMON_X_OFFSET = Math.round((DEFAULT_NODE_WIDTH - COMMON_NODE_WIDTH) / 2); // = 0
 
 // Development
 const DEV_WEB_SP_X = 60;
 const DEV_WEB_MG_X = 280;  // Manager は非公開。構造として保持。
-/** Common ノードの中心を Specialist の中心に合わせる: SP_X + COMMON_X_OFFSET */
+/** Common ノードの左端を Specialist と揃える（同幅なので中心も一致） */
 const DEV_WEB_COMMON_X = DEV_WEB_SP_X + COMMON_X_OFFSET;
 
 const DEV_MOBILE_SP_X = 480;
