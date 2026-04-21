@@ -364,11 +364,9 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
     );
   }
 
-  const summaryStructured = parseStructuredText(node.summary, { stripLeadingHeading: '概要' });
+  const roleStructured = parseStructuredText(node.role ?? node.summary ?? '', { stripLeadingHeading: '概要' });
   const skillsStructured = parseStructuredText(node.requiredSkills.join('\n'), { stripLeadingHeading: '必要スキル' });
   const experienceStructured = parseStructuredText(node.requiredExperience.join('\n'), { stripLeadingHeading: '必要経験' });
-  const certsStructured = parseStructuredText(node.recommendedCerts.join('\n'), { stripLeadingHeading: '推奨資格' });
-  const toolsStructured = parseStructuredText(node.toolsEnvironmentsLanguages.join('\n'), { stripLeadingHeading: 'ツール・環境・言語' });
 
   const trackColorClass =
     {
@@ -395,10 +393,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
     summary: 'bg-gray-400',
     skill: trackColorClass,
     exp: 'bg-gray-400',
-    cert: 'bg-emerald-400',
-    tools: 'bg-slate-400',
-    next: 'bg-amber-400',
-    tags: 'bg-gray-400',
     coexist: 'bg-amber-400',
     related: 'bg-slate-400',
   };
@@ -437,10 +431,10 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
       </div>
 
       <Section title="概要" accentClass={accent.summary}>
-        {summaryStructured ? (
-          <StructuredContent parsed={summaryStructured} />
+        {roleStructured ? (
+          <StructuredContent parsed={roleStructured} />
         ) : (
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{node.summary}</p>
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{node.role ?? node.summary ?? ''}</p>
         )}
       </Section>
 
@@ -460,35 +454,28 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ node, onNodeClick, getNodeByI
         )}
       </Section>
 
-      <Section title="資格" accentClass={accent.cert}>
-        {certsStructured ? (
-          <StructuredContent parsed={certsStructured} chipColor="bg-green-50 text-green-700" />
-        ) : (
-          <TagList items={node.recommendedCerts} color="bg-green-50 text-green-700" wrapLong />
-        )}
+      {/*
+        1차 공개판에서는 概要 / スキル / 経験만 핵심 섹션으로 노출한다.
+        아래 섹션들은 제거하지 않고 비활성화만 유지한다.
+
+      <Section title="資格" accentClass="bg-emerald-400">
+        ...
       </Section>
 
-      <Section title="ツール・環境・言語" accentClass={accent.tools}>
-        {toolsStructured ? (
-          <StructuredContent
-            parsed={toolsStructured}
-            chipColor="bg-gray-50 text-gray-700"
-            itemMode="tags"
-          />
-        ) : (
-          <TagList items={node.toolsEnvironmentsLanguages} color="bg-gray-50 text-gray-700" wrapLong />
-        )}
+      <Section title="ツール・環境・言語" accentClass="bg-slate-400">
+        ...
       </Section>
 
-      <Section title="次の段階に上がる条件" accentClass={accent.next}>
-        <BulletList items={node.nextStepConditions} />
+      <Section title="次の段階に上がる条件" accentClass="bg-amber-400">
+        ...
       </Section>
 
       {node.tags.length > 0 && (
-        <Section title="タグ" accentClass={accent.tags}>
-          <TagList items={node.tags} />
+        <Section title="タグ" accentClass="bg-gray-400">
+          ...
         </Section>
       )}
+      */}
 
       {node.branchNote && (
         <Section title="兼任/分岐メモ" accentClass="bg-amber-400">
