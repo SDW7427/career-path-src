@@ -146,6 +146,7 @@ function createNode(args: {
     pathType: args.pathType,
     titleJa: args.meta.titleJa,
     shortLabel: args.meta.shortLabel,
+    role: SHEET_OVERRIDE_NOTE,
     summary: SHEET_OVERRIDE_NOTE,
     requiredSkills: [],
     requiredExperience: [],
